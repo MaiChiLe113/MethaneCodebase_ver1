@@ -1,0 +1,39 @@
+% Level 01 - Layers and dependency rules
+% Question answered: which layer may import which? (the rule CI enforces with import-linter)
+% Reason: report Section 8.6 asks for a modular architecture that separates ingestion, AI detection,
+% scientific verification, quantification, evidence management and user-facing services.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  lay/.style={box,anchor=north west,text width=11.0cm,align=left,inner sep=6pt,minimum height=1.9cm}]
+
+  % ---- layers (top is highest; may import only what is below) --------------------
+  \node[lay,blue]   (l1) at (0,0)     {\nm{5  Delivery}\\\tech{api/  workers/  cli/  (web/ talks to api/ over HTTP only)}\\\footnotesize Chooses adapters at start-up and exposes use cases. No business rules.};
+  \node[lay,blue]   (l2) at (0,-2.2) {\nm{4  Services}\\\tech{services/}\\\footnotesize Use cases: RunDetection, ReviewDetection, ExportDossier. The only place where flow is orchestrated.};
+  \node[lay,orange] (l3a) at (0,-4.4) {\nm{3  Capabilities}\\\tech{data/  models/  training/  evaluation/  inference/  verification/  quantification/  attribution/  evidence/}\\\footnotesize Pure ML, science and integrity logic. Receives data through ports; never imports a cloud or web library.};
+  \node[lay,blue]   (l4) at (0,-6.6) {\nm{2  Rules and interfaces}\\\tech{domain/  ports/}\\\footnotesize Entities, status state machine, Protocol interfaces. No I/O at all.};
+  \node[lay,grey]   (l5) at (0,-8.8)  {\nm{1  Kernel}\\\tech{core/}\\\footnotesize Typed config, logging, errors, units, clock.};
+  \node[lay,teal]   (ad) at (12.8,-6.6) {\nm{Adapters}\\\tech{adapters/}\\\footnotesize aws, stac, era5, local, memory. Implement ports; import ports and domain only.};
+  \node[box,ext,text width=4.4cm,anchor=north west,minimum height=1.4cm] (out) at (12.8,-8.8) {\nm{Outside world}\\\footnotesize AWS or LocalStack, Sentinel-2 STAC, ERA5 CDS, disk};
+
+  \draw[flow] ([xshift=-6mm]l1.south west) -- ([xshift=-6mm]l5.north west);
+  \node[lab,rotate=90,anchor=south] at ([xshift=-6.5mm]l3a.west) {imports point down};
+
+  \draw[flow] (ad.west) -- node[lab,above] {implements} (l4.east);
+  \draw[flow] (ad.south) -- (out.north);
+
+  % ---- contracts panel -------------------------------------------------------
+  \node[box,red,anchor=north west,text width=4.4cm,align=left,inner sep=7pt] (rules) at (12.8,0) {%
+    \nm{CI contracts (import-linter)}\\[3pt]\footnotesize
+    1. Layers: delivery $>$ services $>$ capabilities $>$ rules $>$ kernel.\\[2pt]
+    2. Forbidden: \texttt{domain}, \texttt{ports} and every capability may not import \texttt{boto3}, \texttt{fastapi}, \texttt{pystac}, \texttt{cdsapi}.\\[2pt]
+    3. \texttt{adapters} may not import \texttt{services}, \texttt{api}, \texttt{workers}.\\[2pt]
+    4. \texttt{web/} has no Python import by construction.};
+
+  \dtitle{Dependencies point down: the science never imports the cloud}
+         {Level 01 - layers. A layer may import only layers below it. Blue is MethaneWatch code, grey is the adapters and the outside world, red is the CI contracts.}
+  \dfoot[16cm]{Why it matters here: the whole science chain and the model zoo can be tested with no cloud and no GPU, and the API can be built while
+    models are still training. Switching LocalStack to AWS is an environment setting read in the composition root.}
+\end{tikzpicture}
+\end{document}

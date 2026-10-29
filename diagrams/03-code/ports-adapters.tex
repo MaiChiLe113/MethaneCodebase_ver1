@@ -1,0 +1,49 @@
+% Level 03 - Ports and adapters
+% Question answered: which interfaces does the core define, and what plugs into each of them in tests, locally and in Beta?
+% Facts: report D9-D13 (AWS serverless pipeline, DynamoDB on-demand, EC2 web app, $200 credit), NFR2/NFR3 (evidence vault, audit),
+% FR3 (ERA5 wind, facility data), Sentinel-2 L1C via STAC. The port list is a proposal for ports/*.py.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  pc/.style={box,blue,text width=5.9cm,align=left,inner sep=3pt,minimum height=1.05cm,font=\sffamily\footnotesize},
+  mc/.style={box,grey,text width=3.6cm,align=left,inner sep=3pt,minimum height=1.05cm,font=\sffamily\scriptsize},
+  lc/.style={box,teal,text width=4.8cm,align=left,inner sep=3pt,minimum height=1.05cm,font=\sffamily\scriptsize},
+  bc/.style={box,orange,text width=4.8cm,align=left,inner sep=3pt,minimum height=1.05cm,font=\sffamily\scriptsize}]
+
+  % column headings
+  \node[head,anchor=south west] at (-2.95,0.75) {Port (ports/, a Protocol)};
+  \node[head,anchor=south west] at (3.6,0.75) {Unit tests};
+  \node[head,anchor=south west] at (7.9,0.75) {Laptop and Alpha};
+  \node[head,anchor=south west] at (13.0,0.75) {Beta and external};
+
+  \def\rowgap{1.28}
+  \newcommand{\prow}[6]{% #1 index, #2 port, #3 methods, #4 memory, #5 local, #6 beta
+    \pgfmathsetmacro{\yy}{-#1*\rowgap}
+    \node[pc] at (0,\yy) {\nm{#2}\\\tech{#3}};
+    \node[mc] at (5.5,\yy) {#4};
+    \node[lc] at (10.3,\yy) {#5};
+    \node[bc] at (15.4,\yy) {#6};
+  }
+
+  \prow{0}{SceneSource}{find\_scenes, load\_stack}{in-memory arrays}{local GeoTIFF folder; Sentinel-2 STAC (pystac-client)}{Sentinel-2 STAC and AWS open data; scene cache in S3}
+  \prow{1}{ObjectStore}{put, get, exists, list}{dict in memory}{local disk; LocalStack S3}{Amazon S3 (data lake bucket)}
+  \prow{2}{DetectionRepository}{save, get, query by region and date}{dict in memory}{LocalStack DynamoDB}{DynamoDB on demand (D12)}
+  \prow{3}{ReviewRepository}{append review, history}{list in memory}{LocalStack DynamoDB}{DynamoDB on demand}
+  \prow{4}{RegionRepository}{save, list, alert cadence}{dict in memory}{LocalStack DynamoDB}{DynamoDB on demand}
+  \prow{5}{WindProvider}{wind\_at(point, time) with source and version}{constant or recorded wind}{ERA5 through the CDS API, cached files}{ERA5 and ERA5T; final values replace preliminary ones}
+  \prow{6}{FacilityIndex}{near(point, radius)}{small list in memory}{GeoJSON or Parquet of public facility data}{same file, versioned in the data lake}
+  \prow{7}{EvidenceStore}{write once, read, verify}{dict, write once}{read-only bucket in LocalStack}{S3 Object Lock, WORM (NFR2)}
+  \prow{8}{Signer}{sign(manifest), verify}{fixed test key}{Ed25519 key from an untracked file}{key custody is a Beta decision (ADR)}
+  \prow{9}{AuthProvider}{authenticate(token), user and role}{fixed users}{JWT with argon2 password hashes}{Cognito (planned)}
+  \prow{10}{AuditSink}{append(entry), verify chain}{list in memory}{LocalStack DynamoDB}{DynamoDB, immutable (NFR3)}
+  \prow{11}{ModelRegistry}{register, approved\_version, load}{dict in memory}{local MLflow server}{MLflow and S3 artefacts}
+
+  \draw[line width=0.5pt,draw=mwline!50] (-3,0.55) -- (18.0,0.55);
+
+  \dtitle{The core defines interfaces; adapters are swapped at start-up}
+         {Level 03 - ports and adapters. One port, three implementations: memory for unit tests, local or LocalStack for development, AWS or the real service in Beta.}
+  \dfoot[20cm]{Rule from the report: do not buy services early. Alpha runs entirely on the first two columns (credit is \$200, decision D13); the third column is scaffolded as Terraform and adapters in Beta.
+    A port exists only if something in services/ needs it; a new port needs an ADR line explaining which test or adapter it makes possible.}
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,42 @@
+% Level 05 - Tensor contract
+% Question answered: exactly what does a model receive and return?
+% Facts: project notes (B11+B12 at 20 m, 100x100, one target + K=6 references, ref_valid mask, finetune has 4 real references);
+% report (2 km chip; a 10 km granule is 25 chips); mask label = delta XCH4 > 150 ppb.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  sl/.style={rectangle,draw=mwgreen,fill=mwgreenL,line width=0.7pt,minimum width=1.9cm,minimum height=1.9cm,inner sep=0pt,font=\sffamily\scriptsize},
+  slg/.style={sl,draw=mwgrey,fill=mwlight,dashed,text=mwgrey},
+  greyd/.style={grey,dashed},
+  slt/.style={sl,draw=mworange,fill=mworangeL,strong}]
+
+  % ---- input stack: 7 time slices, each with 2 bands -------------------------------
+  \node[head,anchor=west] at (-0.2,2.1) {Input  x : (B, 7, 2, 100, 100)};
+  \foreach \i/\n in {0/target,1/ref 1,2/ref 2,3/ref 3,4/ref 4,5/ref 5,6/ref 6} {
+    \pgfmathsetmacro{\xx}{\i*2.2}
+    \ifnum\i=0 \node[slt] (t\i) at (\xx,0) {\n};
+    \else\ifnum\i>4 \node[slg] (t\i) at (\xx,0) {\n};
+    \else \node[sl] (t\i) at (\xx,0) {\n};\fi\fi
+    \node[tiny,text=mwgrey] at (\xx,-1.25) {B11, B12};
+  }
+  \draw[decorate,decoration={brace,amplitude=5pt,mirror},line width=0.7pt,draw=mwline] (-1.0,-1.7) -- (14.2,-1.7) node[midway,below=6pt,font=\sffamily\footnotesize] {7 observations of the same 2 km $\times$ 2 km tile: 1 target + up to 6 references};
+
+  % ---- ref_valid ---------------------------------------------------------------
+  \node[head,anchor=west] at (-0.2,-3.6) {ref\_valid : (B, 7), bool};
+  \foreach \i/\v/\sty in {0/1/green,1/1/green,2/1/green,3/1/green,4/1/green,5/0/greyd,6/0/greyd} {
+    \pgfmathsetmacro{\xx}{\i*2.2}
+    \node[box,minimum width=1.9cm,inner sep=2pt,font=\sffamily\scriptsize,\sty] at (\xx,-4.5) {\v};
+  }
+  \node[note,text width=7cm,anchor=west] at (11.4,-5.55) {Example above: a fine-tuning sample has 4 real references, so slots 5 and 6 are padded and marked 0. Synthetic samples may have up to 6.};
+
+  % ---- output and label ------------------------------------------------------------
+  \node[box,orange,text width=5.2cm,align=left,inner sep=5pt,anchor=north west,font=\sffamily\footnotesize] (out) at (-1.0,-7.0) {\nm{Output: logits (B, 1, 100, 100)}\\ Same resolution as the input. Sigmoid and a threshold give the predicted mask.};
+  \node[box,green,text width=5.2cm,align=left,inner sep=5pt,anchor=north west,font=\sffamily\footnotesize] (lab) at (4.7,-7.0) {\nm{Label: mask (B, 1, 100, 100)}\\ Synthetic: $\Delta$XCH$_4 >$ 150 ppb. Fine-tune: real mask; the noisy MBMP map is not used as the loss target.};
+  \node[box,teal,text width=5.8cm,align=left,inner sep=5pt,anchor=north west,font=\sffamily\footnotesize] (geo) at (10.4,-7.0) {\nm{Scale}\\ 20 m pixels (2$\times$2 mean of 10 m chips), 100 $\times$ 100 = 2 km. A 10 km granule is a 5 $\times$ 5 grid of 25 chips.};
+
+  \dtitle{One tensor shape feeds every model}
+         {Level 05 - tensor contract. Target and references share one tile; missing references are padded and masked, never dropped.}
+  \dfoot[18cm]{Every model in the zoo accepts exactly this input and returns exactly this output; a change here is a change to the benchmark, so it needs an ADR and a version bump in the dataset card.}
+\end{tikzpicture}
+\end{document}

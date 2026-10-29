@@ -1,0 +1,17 @@
+# configs/release_gates.yaml
+# Source of truth for the numbers in report Section 7. Read by evaluation/gates.py.
+# The two blocks are separate on purpose and are never interchangeable:
+#   alpha: research targets, measured and reported for every model; missing them blocks nothing.
+#   beta:  promotion gate, applies only to the model that serves users.
+alpha_targets:
+  iou_min: 0.70
+  f1_min: 0.75
+beta_promotion_gate:
+  f1_min: 0.80
+  false_positive_rate_max: 0.0003   # 0.03 percent
+beta_operations:
+  rollback_seconds_max: 60
+  availability_target: 0.995
+  map_tile_p95_seconds_max: 1.5
+  granule_minutes_max: 15
+  pass_to_notice_hours_max: 24      # Beta target

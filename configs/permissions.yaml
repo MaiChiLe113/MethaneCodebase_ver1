@@ -1,0 +1,21 @@
+# configs/permissions.yaml
+# PROPOSED permission matrix. Deny by default: anything not listed is refused.
+# 'decide' marks cells to settle in sprint 1; the loader treats 'decide' as denied until changed.
+# Mirrors diagrams/03-code/api-routes. A test (tests/unit/api/test_permission_matrix.py) covers every role and action.
+roles: [analyst, inspector, regulator, ml_engineer, admin]
+actions:
+  detections.read:        {analyst: allow, inspector: allow, regulator: allow, ml_engineer: decide, admin: decide}
+  layers.read:            {analyst: allow, inspector: allow, regulator: allow, ml_engineer: decide}
+  review.write:           {analyst: allow}
+  dossier.build:          {analyst: allow, inspector: decide}
+  dossier.download:       {analyst: allow, inspector: allow, regulator: allow}
+  dossier.verify:         {analyst: allow, inspector: allow, regulator: allow}
+  regions.read:           {analyst: allow, inspector: decide, regulator: decide}
+  regions.write:          {analyst: allow}
+  models.read:            {ml_engineer: allow, admin: allow, analyst: decide}
+  models.promote:         {ml_engineer: allow, admin: decide}
+  users.manage:           {admin: allow}
+  audit.read:             {admin: allow, regulator: decide}
+audit:
+  always_for: [review.write, dossier.build, dossier.download, regions.write, models.promote, users.manage]
+  denied_requests: true

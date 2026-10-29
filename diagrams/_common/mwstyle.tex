@@ -1,0 +1,90 @@
+% =============================================================================
+% MethaneWatch diagram style  (shared by every diagram under diagrams/)
+% -----------------------------------------------------------------------------
+% Why one shared file: every diagram must look like part of the same set, and a
+% colour change (for example a layer re-coloured) should be one edit, not 33.
+%
+% Usage, at the top of any diagram:
+%   \documentclass[tikz,border=10pt]{standalone}
+%   \input{../_common/mwstyle.tex}
+%   \begin{document} ... \end{document}
+%
+% Colour meaning is fixed across the whole set (see diagrams/README.md). Two colours plus grey:
+%   blue = MethaneWatch's own parts (application, data, models, science, services)
+%   red  = evidence, security, audit and hard limits (the things that must never be bypassed)
+%   grey = people, cloud and infrastructure, external systems, notes
+% The older names green, orange, purple, teal and gold are kept as aliases so that no diagram
+% source needs to change; they now resolve to blue (green, orange, purple) or grey (teal, gold).
+% =============================================================================
+\usepackage[T1]{fontenc}
+\usepackage[scaled=0.95]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\hyphenpenalty=10000 \exhyphenpenalty=10000 % never hyphenate words inside diagrams
+\usepackage{pifont}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{booktabs}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,shapes.multipart,%
+  shapes.misc,fit,backgrounds,calc,decorations.pathreplacing,matrix,patterns}
+
+% ---- palette ----------------------------------------------------------------
+\definecolor{mwink}{HTML}{1F2933}
+\definecolor{mwgrey}{HTML}{6B7785}
+\definecolor{mwline}{HTML}{4A5560}
+\definecolor{mwlight}{HTML}{F2F4F7}
+\definecolor{mwblue}{HTML}{1F6FB2}   \definecolor{mwblueL}{HTML}{E3EFFA}
+\definecolor{mwred}{HTML}{B5483F}    \definecolor{mwredL}{HTML}{F8E3E0}
+% aliases (see note above)
+\colorlet{mwgreen}{mwblue}   \colorlet{mwgreenL}{mwblueL}
+\colorlet{mworange}{mwblue}  \colorlet{mworangeL}{mwblueL}
+\colorlet{mwpurple}{mwblue}  \colorlet{mwpurpleL}{mwblueL}
+\colorlet{mwteal}{mwgrey}    \colorlet{mwtealL}{mwlight}
+\colorlet{mwgold}{mwgrey}    \colorlet{mwgoldL}{mwlight}
+
+% ---- node and edge styles ---------------------------------------------------
+\tikzset{
+  >={Stealth[length=2.2mm]},
+  every node/.style={font=\sffamily\small,text=mwink},
+  box/.style={rectangle,rounded corners=2.5pt,draw=mwline,line width=0.7pt,
+    fill=white,align=center,inner sep=5pt,minimum height=7mm},
+  blue/.style={draw=mwblue,fill=mwblueL},
+  green/.style={draw=mwgreen,fill=mwgreenL},
+  orange/.style={draw=mworange,fill=mworangeL},
+  purple/.style={draw=mwpurple,fill=mwpurpleL},
+  red/.style={draw=mwred,fill=mwredL},
+  teal/.style={draw=mwteal,fill=mwtealL},
+  gold/.style={draw=mwgold,fill=mwgoldL},
+  grey/.style={draw=mwgrey,fill=mwlight},
+  strong/.style={line width=1.6pt},
+  ext/.style={box,dashed,draw=mwgrey,fill=mwlight},
+  actor/.style={box,gold,rounded corners=8pt,minimum height=9mm},
+  store/.style={cylinder,shape border rotate=90,aspect=0.22,draw=mwgreen,fill=mwgreenL,
+    line width=0.7pt,align=center,inner sep=3pt,minimum height=11mm,minimum width=20mm},
+  group/.style={rectangle,rounded corners=4pt,draw=mwline,dashed,line width=0.7pt,
+    inner sep=7pt},
+  glabel/.style={anchor=north west,font=\sffamily\bfseries\footnotesize,text=mwgrey,inner sep=2pt},
+  note/.style={font=\sffamily\footnotesize,text=mwgrey,align=left,inner sep=1pt},
+  tiny/.style={font=\sffamily\scriptsize},
+  head/.style={font=\sffamily\bfseries\small},
+  flow/.style={->,line width=0.8pt,draw=mwline},
+  dflow/.style={->,line width=0.8pt,draw=mwline,dashed},
+  bflow/.style={<->,line width=0.8pt,draw=mwline},
+  lab/.style={font=\sffamily\scriptsize,text=mwgrey,fill=white,inner sep=1pt},
+}
+
+% ---- title / footer helpers -------------------------------------------------
+% \dtitle{Finding or name}{One-line subtitle: what the diagram answers}
+\newcommand{\dtitle}[2]{%
+  \node[anchor=south west,font=\sffamily\bfseries\Large,text=mwink,inner sep=0pt] (dt)
+    at ([yshift=12mm]current bounding box.north west) {#1};
+  \node[anchor=north west,font=\sffamily\footnotesize,text=mwgrey,inner sep=0pt]
+    at ([yshift=-1.2mm]dt.south west) {#2};}
+% \dfoot{Source or reading note}
+\newcommand{\dfoot}[2][14cm]{%
+  \node[anchor=north west,note,text width=#1] at
+    ([yshift=-4mm]current bounding box.south west) {#2};}
+% in-node text helpers: \nm{Name} bold name, \tech{technology} small grey italic
+\newcommand{\nm}[1]{{\bfseries\small #1}}
+\newcommand{\tech}[1]{{\scriptsize\itshape\color{mwgrey} #1}}
+% check mark used in matrices
+\newcommand{\yes}{\ding{51}}

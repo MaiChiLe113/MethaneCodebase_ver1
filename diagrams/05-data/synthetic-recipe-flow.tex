@@ -1,0 +1,32 @@
+% Level 05 - Synthetic recipe flow
+% Question answered: how is one synthetic training sample produced from a recipe?
+% Facts: project note "Synthetic MethaneSET pipeline" (2026-10-07 and 2026-10-13). All numbers below are from that note.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  c/.style={box,text width=3.3cm,align=left,inner sep=4pt,minimum height=2.0cm,font=\sffamily\footnotesize}]
+
+  \node[c,green] (bg) at (0,0) {\nm{1  Choose a background}\\ Sample a target scene, weight $1/\sqrt{n}$ with $n$ = targets at that location, so busy sites do not dominate};
+  \node[c,green] (rf) at (4.1,0) {\nm{2  Pick references}\\ Up to 6 other passes of the same location; a mask marks missing slots};
+  \node[c,teal] (pl) at (8.2,0) {\nm{3  Pick a plume}\\ Nearest plume in the bank by wind speed, solar zenith (SZA) and relative azimuth (RAA)};
+  \node[c,teal] (rot) at (12.3,0) {\nm{4  Rotate to wind}\\ Align the plume to the ERA5 wind direction with a jitter of $\pm$15$^\circ$};
+  \node[c,purple] (q) at (16.4,0) {\nm{5  Choose a rate}\\ Q log-uniform from 500 to 20,000 kg/h; capped by an edge rule};
+
+  \node[c,purple] (inj) at (16.4,-3.4) {\nm{6  Inject}\\ Beer--Lambert absorption in B11 and B12, calibrated to published S2 sensitivities; air-mass factor from solar and view zenith; elevation pressure factor};
+  \node[c,red] (neg) at (12.3,-3.4) {\nm{7  Negatives}\\ About 30\% of samples inject nothing, so the model learns to say no};
+  \node[c,orange] (lab) at (8.2,-3.4) {\nm{8  Label}\\ Mask where $\Delta$XCH$_4 >$ 150 ppb; the continuous map is kept as an extra target};
+  \node[c,blue] (rc) at (4.1,-3.4) {\nm{9  Write the recipe}\\ Store only the choices (ids, rotation, Q) in a parquet file; deterministic};
+  \node[c,grey] (ld) at (0,-3.4) {\nm{10  Build on the fly}\\ The loader rebuilds each sample from its recipe, about 1.5 ms each};
+
+  \draw[flow] (bg) -- (rf); \draw[flow] (rf) -- (pl); \draw[flow] (pl) -- (rot); \draw[flow] (rot) -- (q);
+  \draw[flow] (q) -- (inj); \draw[flow] (inj) -- (neg); \draw[flow] (neg) -- (lab); \draw[flow] (lab) -- (rc); \draw[flow] (rc) -- (ld);
+
+  \node[box,ext,text width=8.5cm,align=left,inner sep=5pt,font=\sffamily\footnotesize,anchor=north west] at (0,-6.0) {\nm{What was produced (Windows run, 13 Oct 2026)}\\ 1,000,000 training recipes (70\% positive, median rate about 3,149 kg/h) and 20,000 validation recipes (69.1\% positive); validation materialised, training kept as recipes (about 20 GB, versus about 310 GB if written out). Background set: 112,688 images in 56,343 stacks. Plume bank: 279 plumes, 238,545 rows.};
+  \node[box,red,text width=8.0cm,align=left,inner sep=5pt,font=\sffamily\footnotesize,anchor=north west] at (9.4,-6.0) {\nm{Licence flag}\\ MethaneSET data and the MARS-S2L weights are CC BY-NC-SA 4.0: fine for the unit project, a blocker for any commercial use. Recorded in LICENSES.md.};
+
+  \dtitle{A synthetic sample is a recipe, not a file}
+         {Level 05 - synthetic recipe flow. From the pipeline notes of 7 and 13 October 2026.}
+  \dfoot[22cm]{Why recipes: 1 million rebuilt samples cost about 20 GB; storing them would cost about 310 GB. Determinism is the guard: the same recipe must give the same sample on every machine, and a test must prove it.}
+\end{tikzpicture}
+\end{document}

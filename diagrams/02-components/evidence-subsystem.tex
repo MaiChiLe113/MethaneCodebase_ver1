@@ -1,0 +1,48 @@
+% Level 02 - Evidence subsystem components
+% Question answered: how does a result become a tamper-evident dossier, and how is tampering detected?
+% Facts: report D8 (hashes + lineage + signed PDF), NFR2 evidence vault (SHA-256, WORM), NFR3 immutable audit log,
+% Section 7.1 evidence integrity criterion, Section 8.6 (W3C PROV, model cards; integrity is not scientific correctness).
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  c/.style={box,text width=3.2cm,align=left,inner sep=4pt,minimum height=1.9cm,font=\sffamily\footnotesize}]
+
+  % ---- inputs ---------------------------------------------------------------------
+  \node[c,green,minimum height=3.2cm] (inp) at (0,0) {\nm{Inputs to be sealed}\\ Source L1C scene and references; predicted mask; enhancement map; wind source and version; preprocessing version; model version and config; review record};
+
+  % ---- pipeline ---------------------------------------------------------------------
+  \node[c,red] (hash) at (4.6,1.6) {\nm{evidence/hashing}\\\tech{SHA-256}\\ One digest per artefact, streamed; digests listed in a manifest};
+  \node[c,red] (prov) at (9.2,1.6) {\nm{evidence/provenance}\\\tech{PROV-style JSON}\\ Which data, which code, which model, which person produced each result};
+  \node[c,red] (dos) at (13.8,1.6) {\nm{evidence/dossier}\\\tech{PDF + manifest.json}\\ Readable summary for people; exact digests for machines};
+  \node[c,red,strong] (sig) at (13.8,-1.9) {\nm{evidence/signing}\\\tech{Ed25519, detached}\\ Signs the manifest; private key never in the repo};
+  \node[c,red,strong] (store) at (9.2,-1.9) {\nm{Evidence store}\\\tech{port}\\ Write-once: S3 Object Lock in Beta, a read-only bucket locally};
+
+  % ---- verification --------------------------------------------------------------------
+  \node[c,red,minimum height=2.3cm] (ver) at (4.6,-1.9) {\nm{evidence/verify}\\ Recompute digests, check signature: Intact or Tampered, with the artefact that changed};
+
+  % ---- audit chain ------------------------------------------------------------------------
+  \node[c,red,text width=6.6cm,minimum height=1.6cm,align=left] (aud) at (9.2,-5.1) {\nm{evidence/audit}\\\tech{hash chain}\\ Every review, status change and export appends an entry holding the hash of the previous entry, so editing history breaks the chain};
+  \node[c,blue,minimum height=1.6cm] (svc) at (3.0,-5.1) {\nm{services}\\ ReviewDetection and ExportDossier call this package};
+
+  \draw[flow] (inp) -- (hash);
+  \draw[flow] (hash) -- (prov);
+  \draw[flow] (prov) -- (dos);
+  \draw[flow] (dos) -- (sig);
+  \draw[flow] (sig) -- (store);
+  \draw[flow] (store) -- (ver);
+  \draw[dflow] (inp.south east) -- ++(0.9,-0.9) |- (ver.west);
+  \draw[flow] (svc) -- (aud);
+  \draw[flow] (svc.north) |- ([yshift=-3mm]ver.south west);
+  \draw[flow] (sig.south) -- ++(0,-0.5) -| ([xshift=-1.6cm]aud.north);
+
+  \begin{scope}[on background layer]
+    \node[group,fit=(hash)(prov)(dos)(sig)(store)(ver)(aud),draw=mwred,fill=mwredL!25,inner sep=10pt] (g) {};
+  \end{scope}
+  \node[glabel,text=mwred] at (g.north west) {evidence/};
+
+  \dtitle{Change one byte of a dossier and the verifier says Tampered}
+         {Level 02 - evidence subsystem. Test required by the report: modify a protected artefact in a test copy and confirm the check detects it.}
+  \dfoot[17cm]{Boundary: integrity proves that a record is unchanged; it does not prove the science is right. Scientific conclusions come from verification/ and the analyst, never from a valid signature.}
+\end{tikzpicture}
+\end{document}

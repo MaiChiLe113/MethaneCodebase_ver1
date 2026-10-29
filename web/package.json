@@ -1,0 +1,11 @@
+{
+  "name": "methanewatch-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  }
+}

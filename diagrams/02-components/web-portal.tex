@@ -1,0 +1,46 @@
+% Level 02 - Web portal components
+% Question answered: what are the pages of the portal and what do they depend on?
+% Facts: report Figure 5.2.3 (pages: map and review queue, detection detail, site history, evidence dossier,
+% regions and alerts, admin and models), NFR1 (p95 map tile load at most 1.5 s), NFR6 (SUS at least 75).
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  p/.style={box,blue,text width=2.9cm,align=left,inner sep=4pt,minimum height=1.55cm,font=\sffamily\footnotesize},
+  f/.style={box,text width=3.4cm,align=left,inner sep=4pt,minimum height=1.55cm,font=\sffamily\footnotesize}]
+
+  % pages
+  \node[p] (pg1) at (0,0)    {\nm{Map and review queue}\\\tech{pages/MapReview}\\ Ranked candidates beside the map};
+  \node[p] (pg2) at (3.6,0)  {\nm{Detection detail}\\\tech{pages/DetectionDetail}\\ Mask, enhancement, wind, past scenes};
+  \node[p] (pg3) at (7.2,0)  {\nm{Site history}\\\tech{pages/SiteHistory}\\ All passes over one site};
+  \node[p] (pg4) at (10.8,0) {\nm{Evidence dossier}\\\tech{pages/Dossier}\\ Build, download, verify};
+  \node[p] (pg5) at (14.4,0) {\nm{Regions and alerts}\\\tech{pages/Regions}\\ Draw a region, choose cadence};
+  \node[p] (pg6) at (18.0,0) {\nm{Admin and models}\\\tech{pages/Admin}\\ Users, roles, model metrics};
+
+  % features
+  \node[f,blue] (map) at (1.8,-3.2) {\nm{features/map}\\\tech{MapLibre GL}\\ Layers: change in CH$_4$, RGB, wind vectors, plume polygons, facilities; lazy loading and simplified polygons for the 1.5 s p95 target};
+  \node[f,blue] (rv) at (5.9,-3.2) {\nm{features/review}\\ Four statuses, reason, evidence references; Uncertain is never shown as Confirmed};
+  \node[f,blue] (ev) at (10.0,-3.2) {\nm{features/evidence}\\ Dossier state, integrity result, download};
+  \node[f,blue] (rg) at (14.1,-3.2) {\nm{features/regions}\\ Polygon or country picker, alert cadence};
+  \node[f,red] (ac) at (18.2,-3.2) {\nm{features/access}\\ Role guard hides actions the API would refuse};
+
+  % shared
+  \node[f,teal,text width=5.4cm] (api) at (4.1,-6.0) {\nm{api/client}\hfill\tech{generated from OpenAPI}\\ Typed calls; the portal can be built against a mock server before the backend is ready};
+  \node[f,teal,text width=5.4cm] (st) at (10.3,-6.0) {\nm{app/state}\hfill\tech{TanStack Query}\\ Server cache, token in memory, error and empty states};
+  \node[f,grey,dashed,text width=4.2cm] (be) at (16.2,-6.0) {\nm{API (FastAPI)}\\ The only thing the portal talks to};
+
+  \foreach \a/\b in {pg1/map,pg1/rv,pg2/map,pg2/rv,pg3/map,pg4/ev,pg5/rg,pg6/ac} {\draw[flow] (\a.south) -- (\b.north);}
+  \draw[flow] (map.south) -- (api.north west);
+  \draw[flow] (rv.south) -- (api.north);
+  \draw[flow] (ev.south) -- (st.north west);
+  \draw[flow] (rg.south) -- (st.north);
+  \draw[flow] (ac.south) -- (st.north east);
+  \draw[flow] (api) -- (st);
+  \draw[flow] (st) -- (be);
+
+  \dtitle{Six pages, one generated API client}
+         {Level 02 - web portal. The portal holds no business rules; it renders what the API returns and shows its refusals clearly.}
+  \dfoot[20cm]{Acceptance tasks from the report (usability): locate a candidate, interpret its evidence and uncertainty, and record a review decision without help; no participant may read an Uncertain result as confirmed.
+    Mean SUS target at least 75.}
+\end{tikzpicture}
+\end{document}

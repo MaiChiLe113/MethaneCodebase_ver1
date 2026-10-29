@@ -1,0 +1,49 @@
+% Level 04 - User journey (swimlane)
+% Question answered: what does one pass through the system look like from the user's side, and who does what?
+% Source: reconstructed from the report's use cases (Figure 3.1) and usability acceptance tasks (locate a candidate, interpret its evidence
+% and uncertainty, record a review decision). CHECK the step numbering against report Figure 5.2.4 before sprint planning.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  s/.style={box,text width=3.0cm,align=left,inner sep=4pt,minimum height=1.6cm,font=\sffamily\footnotesize},
+  lane/.style={draw=mwline!40,line width=0.5pt},
+  ln/.style={font=\sffamily\bfseries\footnotesize,text=mwgrey,anchor=east,text width=2.6cm,align=right}]
+
+  % lane bands (y centres 0, -2.6, -5.2, -7.8, -10.4)
+  \foreach \y in {0.9,-1.7,-4.3,-6.9,-9.5,-12.1} {\draw[lane] (-3.1,\y) -- (28.2,\y);}
+  \node[ln] at (-0.4,-0.4) {Analyst};
+  \node[ln] at (-0.4,-3.0) {Inspector or regulator};
+  \node[ln] at (-0.4,-5.6) {Portal and API};
+  \node[ln] at (-0.4,-8.2) {Detection pipeline};
+  \node[ln] at (-0.4,-10.8) {Evidence subsystem};
+
+  \node[s,gold] (s1) at (2.6,-0.4) {\nm{1  Sign in}\\ Role decides what the portal shows};
+  \node[s,blue] (s2) at (2.6,-5.6) {\nm{Authenticate}\\ Token to user and role; denied calls audited};
+  \node[s,orange] (s3) at (6.6,-8.2) {\nm{2  New pass processed}\\ Candidates ranked, each with a status proposal};
+  \node[s,gold] (s4) at (10.6,-0.4) {\nm{3  Open map and queue}\\ Locate a candidate on the map};
+  \node[s,blue] (s5) at (10.6,-5.6) {\nm{Serve candidate}\\ Mask, enhancement, wind, past scenes};
+  \node[s,gold] (s6) at (14.6,-0.4) {\nm{4  Inspect evidence}\\ Read uncertainty; Uncertain is never shown as Confirmed};
+  \node[s,gold] (s7) at (18.6,-0.4) {\nm{5  Record review}\\ Status, reason, evidence references};
+  \node[s,blue] (s8) at (18.6,-5.6) {\nm{Store review + audit}\\ Never overwrites; supersedes earlier review};
+  \node[s,red] (s9) at (22.6,-10.8) {\nm{6  Build dossier}\\ Hash, lineage, PDF, signature, write-once store};
+  \node[s,gold] (s10) at (22.6,-0.4) {\nm{7  Export}\\ Analyst requests the dossier when Supported and complete};
+  \node[s,gold] (s11) at (26.2,-3.0) {\nm{8  Verify}\\ Intact or Tampered; inspector and regulator read the history};
+
+  \draw[flow] (s1) -- (s2) {};
+  \draw[flow] (s2.south) |- (s3.west) ;
+  \draw[flow] (s3.east) -| (s5.south);
+  \draw[flow] (s4) -- (s6) ;
+  \draw[flow] (s4.south) -- (s5.north);
+  \draw[flow] (s5.east) -| (s6.south);
+  \draw[flow] (s6) -- (s7);
+  \draw[flow] (s7.south) -- (s8.north);
+  \draw[flow] (s7) -- (s10);
+  \draw[flow] (s10.south) |- (s9.north west);
+  \draw[flow] (s9.east) -| (s11.south);
+
+  \dtitle{One pass: from a new scene to a verified dossier}
+         {Level 04 - user journey. Swimlane of the happy path; refusals and errors are in the sequence diagrams.}
+  \dfoot[22cm]{Reconstructed from the use cases and the usability acceptance tasks; align step numbers with report Figure 5.2.4. Usability targets: mean SUS at least 75; every participant completes the three tasks without help.}
+\end{tikzpicture}
+\end{document}

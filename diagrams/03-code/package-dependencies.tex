@@ -1,0 +1,65 @@
+% Level 03 - Package dependencies (hand-drawn; the rule is enforced by import-linter in CI)
+% Question answered: exactly which package may import which?
+% This diagram is the human-readable form of the contracts in pyproject.toml [tool.importlinter].
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  p/.style={box,text width=1.75cm,align=center,inner sep=3pt,minimum height=1.0cm,font=\sffamily\footnotesize\bfseries},
+  band/.style={font=\sffamily\bfseries\footnotesize,text=mwgrey,anchor=east}]
+
+  % layer 5: delivery
+  \node[p,blue] (api) at (4.4,0) {api};
+  \node[p,blue] (wk)  at (6.6,0) {workers};
+  \node[p,blue] (cli) at (8.8,0) {cli};
+  \node[band] at (-1.5,0) {5 Delivery};
+
+  % layer 4: services
+  \node[p,blue,text width=17.2cm] (svc) at (8.8,-2.2) {services (RunDetection, ReviewDetection, ExportDossier, ConfigureRegion, PromoteModel)};
+  \node[band] at (-1.5,-2.2) {4 Services};
+
+  % layer 3: capabilities
+  \foreach \n/\x in {data/0,models/2.2,training/4.4,evaluation/6.6,inference/8.8,verification/11.0,quantification/13.2,attribution/15.4,evidence/17.6} {
+    \node[p,orange] (\n) at (\x,-5.2) {\n};}
+  \node[band] at (-1.5,-5.2) {3 Capabilities};
+
+  % layer 2
+  \node[p,blue,text width=3.6cm] (dom) at (5.5,-8.4) {domain};
+  \node[p,blue,text width=3.6cm] (prt) at (12.1,-8.4) {ports};
+  \node[band] at (-1.5,-8.4) {2 Rules};
+
+  % layer 1
+  \node[p,grey,text width=17.2cm] (core) at (8.8,-10.5) {core (config, logging, errors, units, clock)};
+  \node[band] at (-1.5,-10.5) {1 Kernel};
+
+  % adapters
+  \node[p,teal,text width=2.9cm,minimum height=2.4cm] (ad) at (21.5,-8.4) {adapters\\[2pt]\scriptsize\mdseries aws, stac, era5, local, memory};
+  \node[box,ext,text width=2.9cm,minimum height=1.0cm,font=\sffamily\scriptsize] (ow) at (21.5,-11.2) {boto3, pystac, cdsapi, disk};
+
+  % --- delivery -> services
+  \foreach \n in {api,wk,cli} {\draw[flow] (\n.south) -- (\n.south |- svc.north);}
+  % --- services -> capabilities (single arrow from band to band)
+  \draw[flow] (svc.south) -- node[lab,right] {orchestrates} (svc.south |- 0,-3.9);
+  \begin{scope}[on background layer]
+    \node[group,fit=(data)(models)(evidence),draw=mworange,fill=mworangeL!25,inner sep=9pt] (cap) {};
+  \end{scope}
+  % --- inside capabilities (allowed lateral imports)
+  % --- capabilities -> rules
+  \draw[flow] (dom.north |- cap.south) -- (dom.north);
+  \draw[flow] (prt.north |- cap.south) -- (prt.north);
+  % --- rules -> kernel
+  \draw[flow] (dom.south) -- (dom.south |- core.north);
+  \draw[flow] (prt.south) -- (prt.south |- core.north);
+  % --- adapters
+  \draw[flow] (ad.west) -- node[lab,above] {implements} (prt.east);
+  \draw[flow] (ad.south) -- (ow.north);
+  \draw[dflow] (cli.east) -| node[lab,pos=0.25,above] {composition root picks adapters at start-up} (ad.north);
+
+  % forbidden callout
+  \node[box,red,text width=4.2cm,align=left,inner sep=5pt,font=\sffamily\scriptsize,anchor=north west] at (23.0,-1.2) {\nm{Never allowed}\\ $\bullet$ a package importing a layer above it\\ $\bullet$ \texttt{domain}, \texttt{ports} or a capability importing \texttt{boto3}, \texttt{fastapi}, \texttt{pystac}, \texttt{cdsapi}\\ $\bullet$ \texttt{adapters} importing \texttt{services} or delivery\\ $\bullet$ \texttt{web/} importing Python};
+
+  \dtitle{Who may import whom, package by package}
+         {Level 03 - package dependencies. Solid arrow: import allowed. Dashed: wired at start-up only. Capabilities may import each other only as listed below.}
+  \dfoot[22cm]{Lateral imports inside capabilities are deliberately few. training imports models, data and evaluation; inference imports models and data; evaluation imports data. verification, quantification, attribution and evidence import nothing from their siblings; services combine them.}
+\end{tikzpicture}
+\end{document}

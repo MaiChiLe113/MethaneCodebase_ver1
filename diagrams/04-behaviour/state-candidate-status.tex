@@ -1,0 +1,41 @@
+% Level 04 - State machine: lifecycle of a candidate detection
+% Question answered: how does a model output become Supported, Rejected, Uncertain or Unreviewable, and when is it a confirmed emission?
+% Facts: report FR7 (three verification stages, four statuses), Section 7.1 (an emission is confirmed only when the analyst sets Supported and the evidence is complete).
+% Transitions not drawn here (for example re-opening after a new pass) are decisions for sprint 1.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  st/.style={box,rounded corners=9pt,text width=3.2cm,align=center,inner sep=4pt,minimum height=1.5cm,font=\sffamily\footnotesize},
+  sm/.style={font=\sffamily\scriptsize,text=mwgrey,align=left}]
+
+  \fill[mwink] (-1.0,0) circle (0.18);
+  \node[st,orange] (cand) at (2.2,0) {\nm{Candidate}\\ mask, confidence, model version};
+  \node[st,purple,text width=3.6cm,minimum height=2.4cm] (ver) at (7.0,0) {\nm{Automatic verification}\\ 1 observation quality\\ 2 spectral and temporal\\ 3 physical plausibility};
+
+  \node[st,grey] (un) at (12.4,4.8) {\nm{Unreviewable}\\\tech{stage 1 failed}\\ cloud, invalid pixels, bad alignment, no usable reference};
+  \node[st,red] (rj) at (12.4,1.6) {\nm{Rejected}\\\tech{stage 2 or 3}\\ persistent surface feature or inconsistent with physics};
+  \node[st,gold] (uc) at (12.4,-1.6) {\nm{Uncertain}\\\tech{evidence conflicts}\\ cannot be shown as Confirmed};
+  \node[st,green] (su) at (12.4,-4.8) {\nm{Supported}\\\tech{consistent so far}\\ supporting evidence, not proof};
+  \node[sm,anchor=south] at (12.4,6.1) {proposed by the system};
+
+  \node[st,blue,text width=3.4cm,minimum height=2.6cm] (an) at (17.6,0) {\nm{Analyst review}\\ sets one of the four statuses with a reason and evidence references};
+
+  \node[st,green,strong,text width=3.4cm,minimum height=1.7cm] (ce) at (22.6,-3.2) {\nm{Confirmed emission}\\ Supported + evidence complete};
+  \node[st,grey,text width=3.4cm,minimum height=1.7cm] (nc) at (22.6,2.4) {\nm{Recorded, not confirmed}\\ any other final status};
+
+  \draw[flow] (-0.82,0) -- (cand);
+  \draw[flow] (cand) -- (ver);
+  \foreach \t in {un,rj,uc,su} {\draw[flow] (ver.east) -- (\t.west);}
+  \foreach \t in {un,rj,uc,su} {\draw[flow] (\t.east) -- (an.west);}
+  \draw[flow] (an.east) -- node[lab,above,sloped] {Supported, complete} (ce.north west);
+  \draw[flow] (an.east) -- node[lab,above,sloped] {otherwise} (nc.south west);
+  \draw[dflow] (an.north) -- ++(0,1.4) -| node[lab,pos=0.2,above] {a later review supersedes; history is kept} (an.north east);
+
+  \node[box,ext,text width=5cm,align=left,font=\sffamily\scriptsize,anchor=north west] at (-1.3,-3.2) {\nm{Rules}\\ A status never changes without a Review record.\\ The system proposes; only an analyst decides.\\ Unreviewable stays visible in history; nothing is deleted.};
+
+  \dtitle{The system proposes, the analyst decides, and only complete evidence confirms}
+         {Level 04 - candidate status. Four statuses from the report; the machine's proposal and the analyst's decision are separate records.}
+  \dfoot[22cm]{Checks that rely on related satellite data (stage 2) strengthen consistency but are not independent confirmation. Stage 3 is supporting, not proof. Re-opening after a new satellite pass is a sprint-1 decision.}
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,58 @@
+% Level 00 - System context (C4 level 1)
+% Question answered: who uses MethaneWatch, and which outside systems does it rely on?
+% Source of facts: COS40005 Team & Project Plan, Sections 3 (stakeholders, Fig 3.1) and 5.1.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[node distance=14mm]
+
+  % ---- the system ------------------------------------------------------------
+  \node[box,blue,strong,minimum width=5.6cm,minimum height=3.6cm,text width=5.2cm] (mw) {%
+    {\bfseries\large MethaneWatch}\\[2pt]
+    Turns Sentinel-2 imagery into ranked, \emph{analyst-verified} methane plume
+    candidates, each with an emission-rate estimate, a likely facility and a
+    signed evidence dossier.};
+
+  % ---- people (left and right) ----------------------------------------------
+  \node[actor,text width=3.9cm,left=24mm of mw,yshift=12mm] (an) {%
+    {\bfseries Remote sensing analyst}\\[1pt]\footnotesize Configures areas, reviews
+    candidates, corrects masks};
+  \node[actor,text width=3.9cm,below=7mm of an] (ins) {%
+    {\bfseries Government environment inspector}\\[1pt]\footnotesize Views map and history,
+    validates estimates};
+  \node[actor,text width=3.9cm,right=24mm of mw,yshift=12mm] (reg) {%
+    {\bfseries Alert body / regulator}\\[1pt]\footnotesize Views map, receives exported
+    plume reports and alert drafts};
+  \node[actor,text width=3.9cm,below=7mm of reg] (ml) {%
+    {\bfseries ML engineer}\\[1pt]\footnotesize Maintains and updates the detection model};
+
+  % ---- external systems (top and bottom) ------------------------------------
+  \node[ext,text width=4.6cm,above=16mm of mw,xshift=-34mm] (s2) {%
+    {\bfseries Sentinel-2 data hub}\\[1pt]\footnotesize L1C imagery via AWS Open Data;
+    a new-scene event starts each run};
+  \node[ext,text width=4.6cm,above=16mm of mw,xshift=34mm] (era) {%
+    {\bfseries Weather data service}\\[1pt]\footnotesize ERA5 wind for emission-rate
+    estimation (hourly, about 31 km)};
+  \node[ext,text width=4.6cm,below=16mm of mw,xshift=-34mm] (fac) {%
+    {\bfseries Public infrastructure datasets}\\[1pt]\footnotesize Facility locations used
+    for source attribution};
+  \node[ext,text width=4.6cm,below=16mm of mw,xshift=34mm] (mset) {%
+    {\bfseries MethaneSET and CH4Net resources}\\[1pt]\footnotesize Training and test data,
+    baseline weights; licence terms apply};
+
+  % ---- relations -------------------------------------------------------------
+  \draw[flow] (an.east) -- node[lab,pos=0.35,yshift=7pt] {configure, review} (an.east -| mw.west);
+  \draw[flow] (ins.east) -- node[lab,pos=0.35,yshift=-7pt] {view, validate} (ins.east -| mw.west);
+  \draw[flow] (mw.east |- reg.west) -- node[lab,pos=0.6,yshift=7pt] {reports, alerts} (reg.west);
+  \draw[flow] (ml.west) -- node[lab,pos=0.4,yshift=-7pt] {updated model} (ml.west -| mw.east);
+  \draw[flow] (s2.south) -- node[lab,pos=0.45] {scenes} (s2.south |- mw.north);
+  \draw[flow] (era.south) -- node[lab,pos=0.45] {wind} (era.south |- mw.north);
+  \draw[flow] (fac.north) -- node[lab,pos=0.45] {facilities} (fac.north |- mw.south);
+  \draw[flow] (mset.north) -- node[lab,pos=0.45] {datasets} (mset.north |- mw.south);
+
+  \dtitle{MethaneWatch sits between four human roles and four data sources}
+         {Level 00 - system context. Solid boxes are people, dashed boxes are external systems.}
+  \dfoot[15cm]{Field operations and corporate sustainability groups are served through the exported plume reports and
+    alert drafts; they are not modelled as direct users in this version (report, Section 3).}
+\end{tikzpicture}
+\end{document}

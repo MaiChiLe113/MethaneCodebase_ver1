@@ -1,0 +1,58 @@
+% Level 03 - Domain model (class diagram)
+% Question answered: what are the entities in domain/ and how do they relate?
+% Facts: report FR1-FR7, Section 7.1 (review record: reviewer, timestamp, reason, evidence references;
+% emission result with wind source and version, or explicit Unavailable/Uncertain), Section 7.1 evidence integrity.
+% This is a proposal for domain/entities.py; names are final only after the first sprint review.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  cls/.style={rectangle split,rectangle split parts=2,draw=mwblue,line width=0.7pt,rounded corners=2pt,
+    rectangle split part fill={mwblueL,white},align=left,text width=3.9cm,font=\sffamily\scriptsize,inner sep=3pt},
+  clsg/.style={cls,draw=mwgreen,rectangle split part fill={mwgreenL,white}},
+  clsp/.style={cls,draw=mwpurple,rectangle split part fill={mwpurpleL,white}},
+  clsr/.style={cls,draw=mwred,rectangle split part fill={mwredL,white}},
+  clso/.style={cls,draw=mworange,rectangle split part fill={mworangeL,white}},
+  mult/.style={font=\sffamily\scriptsize,text=mwink,inner sep=1pt,fill=white},
+  assoc/.style={line width=0.7pt,draw=mwline}]
+
+  % ---- left column ------------------------------------------------------------------
+  \node[clso] (mv) at (0,0) {\textbf{ModelVersion}\nodepart{second}model\_version\\mlflow\_run\\dataset\_version\\metrics\\approved: bool};
+  \node[clsg] (sc) at (0,-3.9) {\textbf{Scene}\nodepart{second}scene\_id\\tile, acquired\_at\\cloud\_fraction\\uri, sha256\\reference\_ids (up to 6)};
+  \node[cls] (rg) at (0,-7.6) {\textbf{Region}\nodepart{second}region\_id, name\\polygon\\alert\_cadence\\owner: User};
+  \node[cls] (us) at (0,-11.3) {\textbf{User}\nodepart{second}user\_id, email\\role: analyst $|$ inspector $|$\\\quad regulator $|$ ml\_engineer $|$ admin};
+
+  % ---- centre -------------------------------------------------------------------------
+  \node[cls,strong] (de) at (6.6,-3.9) {\textbf{Detection}\nodepart{second}detection\_id\\scene\_id, region\_id\\mask\_uri, confidence\\model\_version\\created\_at\\latest\_status (derived)};
+  \node[cls] (rv) at (6.6,-8.7) {\textbf{Review}\nodepart{second}review\_id, detection\_id\\reviewer\_id\\status: Supported $|$ Rejected $|$\\\quad Uncertain $|$ Unreviewable\\reason, reviewed\_at\\evidence\_refs};
+  \node[clsr] (au) at (6.6,-12.9) {\textbf{AuditEntry}\nodepart{second}seq, at, user\_id\\action, target\\prev\_hash, hash};
+
+  % ---- right column ---------------------------------------------------------------------
+  \node[clsp] (vr) at (13.2,0) {\textbf{VerificationResult}\nodepart{second}detection\_id\\stage: 1 $|$ 2 $|$ 3\\outcome, details\\evidence\_refs};
+  \node[clsp] (es) at (13.2,-3.9) {\textbf{EmissionEstimate}\nodepart{second}detection\_id\\state: Estimate $|$ Unavailable $|$ Uncertain\\rate\_kg\_h, low, high (if Estimate)\\wind\_source, wind\_version\\preliminary: bool, reason};
+  \node[clsp] (fm) at (13.2,-7.8) {\textbf{FacilityMatch}\nodepart{second}detection\_id\\facility\_id (optional)\\distance\_m\\resolved: bool};
+  \node[clsp] (fa) at (19.6,-7.8) {\textbf{Facility}\nodepart{second}facility\_id, name\\kind, geometry\\source\_dataset};
+  \node[clsr] (ed) at (13.2,-11.8) {\textbf{EvidenceDossier}\nodepart{second}dossier\_id, detection\_id\\review\_id\\manifest\_sha256, signature\\uri, created\_at};
+
+  % ---- relations (label = multiplicity near each end) --------------------------------------
+  \draw[assoc] (de.north west) -- ++(-0.65,0) |- (mv.east);
+  \node[mult] at ([xshift=-0.3cm,yshift=0.2cm]de.north west) {*};\node[mult] at ([xshift=0.3cm,yshift=0.2cm]mv.east) {1};
+  \draw[assoc] (de.west) -- node[mult,pos=0.1,above] {*} node[mult,pos=0.9,above] {1} (sc.east);
+  \draw[assoc] (de.south west) -- ++(-0.65,0) |- (rg.east);
+  \node[mult] at ([xshift=-0.3cm,yshift=-0.2cm]de.south west) {*};\node[mult] at ([xshift=0.3cm,yshift=0.2cm]rg.east) {1};
+  \draw[assoc] (de.north east) -- node[mult,pos=0.1,above] {1} node[mult,pos=0.9,above] {3} (vr.west);
+  \draw[assoc] (de.east) -- node[mult,pos=0.1,above] {1} node[mult,pos=0.9,above] {0..1} (es.west);
+  \draw[assoc] (de.south east) -- node[mult,pos=0.1,above] {1} node[mult,pos=0.9,above] {0..1} (fm.west);
+  \draw[assoc] (fm) -- node[mult,pos=0.1,above] {*} node[mult,pos=0.9,above] {0..1} (fa);
+  \draw[assoc] (de.south) -- node[mult,pos=0.12,right] {1} node[mult,pos=0.88,right] {*} (rv.north);
+  \draw[assoc] (rv.west) -| ([xshift=-0.4cm]us.north east);
+  \node[mult] at ([xshift=-0.3cm,yshift=0.2cm]rv.west) {*};\node[mult] at ([xshift=-0.4cm,yshift=0.3cm]us.north east) {1};
+  \draw[assoc] (rv.east) -- ++(0.9,0) |- node[mult,pos=0.1,right] {1} node[mult,pos=0.97,above] {*} (ed.west);
+  \draw[assoc] (au.west) -| node[mult,pos=0.1,above] {*} node[mult,pos=0.95,right] {1} ([xshift=3mm]us.south east);
+
+  \dtitle{Detection is the centre; everything else hangs off it}
+         {Level 03 - domain model. Blue entities, red evidence and audit. Multiplicities near each end.}
+  \dfoot[21cm]{Design rules visible here: a Review is never edited (a later Review supersedes it, so history stays); EmissionEstimate has an explicit state so there is no bare number;
+    FacilityMatch may be unresolved; AuditEntry chains to the previous hash; \texttt{latest\_status} is derived, not stored.}
+\end{tikzpicture}
+\end{document}

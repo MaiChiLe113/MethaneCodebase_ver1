@@ -1,0 +1,25 @@
+% =============================================================================
+% Minimal sequence-diagram macros (no extra package, so every diagram compiles with the same TeX install)
+%   \lifehead{name}{x}{colour}{label}   participant box at (x,0), name = node name
+%   \life{x}{ytop}{ybottom}             dashed lifeline
+%   \act{x}{y1}{y2}                     activation bar
+%   \msg{x1}{x2}{y}{label}              solid message arrow, label above the line
+%   \ret{x1}{x2}{y}{label}              dashed return arrow
+%   \selfmsg{x}{y}{label}               message to self (loop on the right)
+%   \frag{x1}{x2}{y1}{y2}{kind}         fragment frame (alt, loop, opt) with kind label
+%   \fragsep{x1}{x2}{y}{text}           dashed divider inside a fragment
+%   \snote{x}{y}{width}{text}           grey note
+% Coordinates are in cm; y decreases downward.
+% =============================================================================
+\newcommand{\lifehead}[4]{\node[box,#3,text width=2.3cm,align=center,inner sep=3pt,font=\sffamily\footnotesize\bfseries] (#1) at (#2,0) {#4};}
+\newcommand{\life}[3]{\draw[dash pattern=on 2pt off 2pt,draw=mwgrey,line width=0.6pt] (#1,#2) -- (#1,#3);}
+\newcommand{\act}[3]{\draw[fill=mwlight,draw=mwline,line width=0.5pt] (#1-0.09,#2) rectangle (#1+0.09,#3);}
+\newcommand{\msg}[4]{\draw[flow] (#1,#3) -- (#2,#3) node[midway,above,lab,fill=none,text=mwink,inner sep=1.5pt,font=\sffamily\scriptsize] {#4};}
+\newcommand{\ret}[4]{\draw[dflow] (#1,#3) -- (#2,#3) node[midway,above,lab,fill=none,inner sep=1.5pt,font=\sffamily\scriptsize] {#4};}
+\newcommand{\selfmsg}[3]{\draw[flow] (#1+0.09,#2) -- ++(0.7,0) -- ++(0,-0.45) -- ($(#1+0.09,#2-0.45)$);
+  \node[anchor=west,font=\sffamily\scriptsize,text=mwink,inner sep=1pt] at (#1+0.85,#2-0.22) {#3};}
+\newcommand{\frag}[5]{\draw[draw=mwgrey,line width=0.7pt,rounded corners=2pt] (#1,#3) rectangle (#2,#4);
+  \node[anchor=north west,font=\sffamily\bfseries\scriptsize,fill=mwlight,draw=mwgrey,inner sep=2pt] at (#1,#3) {#5};}
+\newcommand{\fragsep}[4]{\draw[dashed,draw=mwgrey,line width=0.6pt] (#1,#3) -- (#2,#3);
+  \node[anchor=north west,font=\sffamily\scriptsize,text=mwgrey,inner sep=2pt] at (#1,#3) {#4};}
+\newcommand{\snote}[4]{\node[anchor=north west,text width=#3,align=left,font=\sffamily\scriptsize,text=mwgrey,fill=mwgoldL,draw=mwgold!50,inner sep=3pt] at (#1,#2) {#4};}

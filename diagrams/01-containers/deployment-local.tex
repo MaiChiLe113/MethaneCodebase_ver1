@@ -1,0 +1,46 @@
+% Level 01 - Local deployment
+% Question answered: what runs on a developer machine, what runs on a GPU machine, and where does data live?
+% Facts: your pipeline notes (Mac data prep, Windows RTX 3060 run, shared Drive folder methane_data),
+% report D5 (DVC), D9 (Kaggle / own GPU / Spot GPU), R17 (test locally before AWS).
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  svc/.style={box,text width=2.9cm,align=left,inner sep=5pt,minimum height=1.7cm}]
+
+  % ---- developer laptop ------------------------------------------------------------
+  \node[svc,blue] (web) at (0,0)    {\nm{web}\\\tech{Vite dev server}\\\footnotesize React portal against the local API};
+  \node[svc,blue] (api) at (4.1,0)  {\nm{api}\\\tech{FastAPI container}\\\footnotesize Same image as Beta};
+  \node[svc,teal] (ls)  at (8.2,0)  {\nm{localstack}\\\tech{S3, DynamoDB, SQS, SNS}\\\footnotesize Stands in for AWS};
+  \node[svc,orange] (mlf) at (12.3,0) {\nm{mlflow}\\\tech{tracking server}\\\footnotesize Runs and model versions};
+  \node[svc,green,minimum width=3.6cm,text width=3.2cm] (venv) at (0,-3.2) {\nm{Python venv (uv)}\\\tech{extras: dev, api, ml}\\\footnotesize Data preparation, unit tests, CPU-sized model tests};
+  \node[svc,purple] (inf) at (4.1,-3.2) {\nm{inference worker}\\\tech{container, CPU}\\\footnotesize Runs the science chain on fixtures};
+
+  \begin{scope}[on background layer]
+    \node[group,fit=(web)(api)(ls)(mlf)(inf),draw=mwteal,fill=mwtealL!35,inner sep=12pt] (compose) {};
+  \end{scope}
+  \node[glabel,text=mwteal] at (compose.north west) {docker-compose.yml};
+  \begin{scope}[on background layer]
+    \node[group,fit=(compose)(venv),draw=mwline,inner sep=12pt] (laptop) {};
+  \end{scope}
+  \node[glabel,text=mwline,anchor=north west] at (laptop.north west) {Developer laptop (macOS or Linux)};
+
+  % ---- GPU machine ---------------------------------------------------------------
+  \node[svc,orange,text width=3.4cm,minimum width=3.8cm] (gpu) at (17.2,-5.7) {\nm{GPU machine}\\\tech{own RTX 3060 PC, or Kaggle}\\\footnotesize Pretraining on 1M recipes, fine-tuning, benchmark. Runs the trainer image};
+  \node[store,minimum width=4cm] (drive) at (9.2,-8.6) {\textbf{DVC remote}\\\tiny shared Drive folder methane\_data: recipes, split manifests};
+
+  % ---- flows ------------------------------------------------------------------
+  \draw[flow] (web) -- node[lab,above] {REST} (api);
+  \draw[flow] (api) -- node[lab,above] {boto3} (ls);
+  \draw[flow] (inf.north) -- (inf.north |- ls.south west) -| node[lab,pos=0.2,above] {stores} (ls.south);
+  \draw[flow] (venv.south) |- node[lab,pos=0.7,above] {dvc push} (drive.west);
+  \draw[flow] (drive.east) -| node[lab,pos=0.2,above] {dvc pull} (gpu.south);
+  \draw[flow] (gpu.north) |- node[lab,pos=0.25,right] {runs, metrics} (mlf.east);
+  \draw[dflow] (mlf.south) -- ++(0,-1.0) -| node[lab,pos=0.25,above] {approved model file} (inf.south east);
+
+  \dtitle{Alpha runs on a laptop; only training needs a GPU}
+         {Level 01 - local deployment. Nothing here needs an AWS account, which keeps the \$200 credit for the Beta stack (risk R17).}
+  \dfoot[17cm]{Data preparation stays on the Mac and writes to the shared Drive folder through DVC; the GPU machine pulls it. A model reaches the inference worker only as a registered,
+    approved file, never by copying a notebook output. Sentinel-2 STAC and ERA5 are called only by runs that do not use fixtures.}
+\end{tikzpicture}
+\end{document}

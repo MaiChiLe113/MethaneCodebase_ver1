@@ -1,0 +1,63 @@
+% Level 02 - ML pipeline components
+% Question answered: how are data, models, training and evaluation wired for one benchmark run?
+% Facts: report D2-D6, Section 7.2.1, backlog PB-03 to PB-13; your synthetic pipeline notes (recipes, splits).
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  c/.style={box,text width=3.2cm,align=left,inner sep=4pt,minimum height=1.55cm,font=\sffamily\footnotesize}]
+
+  % ---- row 1: data ----------------------------------------------------------------
+  \node[c,grey,dashed] (src) at (0,0) {\nm{MethaneSET}\\\tech{Source Cooperative}\\ s2-pretraining backgrounds, bank of plumes, s2-finetune (real)};
+  \node[c,green] (load) at (4.1,0) {\nm{data/methaneset}\\\tech{loaders}\\ Reads chips; checks bands (B11, B12), shape, metadata};
+  \node[c,green] (synth) at (8.2,0) {\nm{data/synthetic + recipes}\\\tech{Beer-Lambert injection}\\ Deterministic recipes, about 20 GB instead of 310 GB of images};
+  \node[c,green] (split) at (12.3,0) {\nm{data/splits}\\\tech{manifest + hash}\\ Group by event, site, date; synthetic never in the benchmark};
+  \node[c,green,strong] (dl) at (16.4,0) {\nm{data/dataset}\\\tech{DataLoader}\\ Tensor (B, 7, 2, 100, 100) and ref\_valid mask};
+
+  % ---- row 2: models and training -----------------------------------------------------
+  \node[c,orange] (reg) at (0,-3.4) {\nm{models/registry}\\\tech{factory, one interface}\\ unet, vit\_unet, mamba variants, st\_cm\_unet, classical, sam4ch4};
+  \node[c,orange] (loss) at (4.1,-3.4) {\nm{training/losses}\\ Class imbalance: plumes are about 3\% of pixels};
+  \node[c,orange,strong] (trn) at (8.2,-3.4) {\nm{training/trainer}\\\tech{pretrain, then finetune}\\ Synthetic pretraining, real fine-tuning, fixed seeds};
+  \node[c,orange] (mlf) at (12.3,-3.4) {\nm{training/tracking}\\\tech{MLflow}\\ Logs commit, data version, config, seed, artefact};
+  \node[c,grey,dashed] (gpu) at (16.4,-3.4) {\nm{Compute}\\ Own GPU, Kaggle or Spot GPU; CPU for tests};
+
+  % ---- row 3: evaluation --------------------------------------------------------------------
+  \node[c,orange] (met) at (0,-6.8) {\nm{evaluation/metrics}\\ IoU, F1, precision, recall, pixel FPR, scene false alarms};
+  \node[c,orange,strong] (bench) at (4.1,-6.8) {\nm{evaluation/benchmark}\\ Same split, preprocessing and metric code for every model};
+  \node[c,red] (leak) at (8.2,-6.8) {\nm{evaluation/leakage}\\ Fails if sites, dates or backgrounds overlap, or synthetic leaks};
+  \node[c,orange] (rep) at (12.3,-6.8) {\nm{evaluation/report}\\ Per-surface results, params, FLOPs, Alpha and Beta gates};
+  \node[c,blue] (rel) at (16.4,-6.8) {\nm{Model registry}\\\tech{MLflow}\\ Approved versions only (see release-gate)};
+
+  % ---- flows ---------------------------------------------------------------------------------
+  \draw[flow] (src) -- (load);
+  \draw[flow] (load) -- (synth);
+  \draw[flow] (synth) -- (split);
+  \draw[flow] (split) -- (dl);
+  \draw[flow] (dl.south) -- ++(0,-0.9) -| (trn.north);
+  \draw[flow] (reg) -- (loss);
+  \draw[flow] (loss) -- (trn);
+  \draw[flow] (trn) -- (mlf);
+  \draw[dflow] (gpu) -- (mlf);
+  \draw[flow] (trn.south) -- ++(0,-0.7) -| (bench.north);
+  \draw[flow] (met) -- (bench);
+  \draw[flow] (leak) -- (bench);
+  \draw[flow] (split.south) -- ++(0,-0.35) -| ([xshift=3mm]leak.north);
+  \draw[flow] (bench) -- ++(0,-1.4) -| (rep.south);
+  \draw[flow] (rep) -- (rel);
+
+  % ---- group backgrounds -----------------------------------------------------------------------
+  \begin{scope}[on background layer]
+    \node[group,fit=(src)(load)(synth)(split)(dl),draw=mwgreen,fill=mwgreenL!30,inner sep=9pt] (g1) {};
+    \node[group,fit=(reg)(loss)(trn)(mlf)(gpu),draw=mworange,fill=mworangeL!30,inner sep=9pt] (g2) {};
+    \node[group,fit=(met)(bench)(leak)(rep)(rel),draw=mworange,fill=mworangeL!15,inner sep=9pt] (g3) {};
+  \end{scope}
+  \node[glabel,text=mwgreen] at (g1.north west) {data/};
+  \node[glabel,text=mworange] at (g2.north west) {models/ and training/};
+  \node[glabel,text=mworange] at (g3.north west) {evaluation/};
+
+  \dtitle{One protocol decides every model: same split, same metrics, same code}
+         {Level 02 - ML pipeline. Thick border: the step every other step depends on. Dashed: outside the code.}
+  \dfoot[20cm]{Rules enforced here (report Section 7.2.1): samples are grouped by emission event and date before splitting; selection and thresholds use validation only;
+    the held-out real test set is used once, after the model and threshold are fixed. U-Net and ViT-U-Net are the principal baselines; Mamba variants are secondary.}
+\end{tikzpicture}
+\end{document}

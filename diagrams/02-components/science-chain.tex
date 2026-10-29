@@ -1,0 +1,52 @@
+% Level 02 - Science chain components
+% Question answered: what happens between "the model drew a mask" and "an analyst sees a defensible result"?
+% Facts: report Section 8.5 (three verification stages, four statuses, IME, ERA5 limits), FR3, FR7, Section 7.1 acceptance criteria.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  c/.style={box,text width=3.4cm,align=left,inner sep=4pt,minimum height=2.3cm,font=\sffamily\footnotesize}]
+
+  \node[c,orange,minimum height=1.6cm] (cand) at (0,0) {\nm{Candidate object}\\ Mask, confidence, model version (from inference)};
+
+  % ---- verification (FR7) ---------------------------------------------------------
+  \node[c,purple] (v1) at (4.4,2.6) {\nm{verification/stage1}\\\tech{observation quality}\\ Cloud, invalid pixels, image alignment, suitability of reference scenes};
+  \node[c,purple] (v2) at (8.8,2.6) {\nm{verification/stage2}\\\tech{spectral and temporal}\\ Mask against a physical enhancement product (MBMP); persistent surface features from history};
+  \node[c,purple] (v3) at (13.2,2.6) {\nm{verification/stage3}\\\tech{physical plausibility}\\ Plume shape and orientation against wind and nearby sources (supporting, not proof)};
+  \node[c,purple,strong,text width=3.4cm] (dec) at (17.6,2.6) {\nm{verification/status}\\ Proposes one of four statuses: Supported, Rejected, Uncertain, Unreviewable};
+
+  % ---- quantification (FR3) ------------------------------------------------------
+  \node[c,grey,dashed,minimum height=1.8cm] (wind) at (4.4,-2.6) {\nm{Wind provider}\\\tech{port, ERA5 adapter}\\ Source and product version recorded};
+  \node[c,purple] (ime) at (8.8,-2.6) {\nm{quantification/ime}\\\tech{Q = IME x U\_eff / L}\\ Excess mass, effective wind, plume length, units checked};
+  \node[c,purple] (unc) at (13.2,-2.6) {\nm{quantification/uncertainty}\\ Range from wind, mask, length; marks rate preliminary until final ERA5};
+  \node[c,purple,strong] (est) at (17.6,-2.6) {\nm{Estimate or Unavailable}\\ A rate with range, or an explicit reason. Never a bare number.};
+
+  % ---- attribution -------------------------------------------------------------
+  \node[c,grey,dashed,minimum height=1.8cm] (fidx) at (4.4,-6.4) {\nm{Facility index}\\\tech{port}\\ Public infrastructure data};
+  \node[c,purple] (att) at (8.8,-6.4) {\nm{attribution/match}\\ Plausible sources by distance, wind direction, plume geometry};
+  \node[c,purple,strong] (res) at (13.2,-6.4) {\nm{Match or Unresolved}\\ Several candidates or none stay unresolved for the analyst};
+  \node[c,blue,strong,text width=3.4cm,minimum height=2.0cm] (out) at (17.6,-6.4) {\nm{Detection record}\\ Status, estimate, match and all evidence references go to the review queue};
+
+  % ---- flows ---------------------------------------------------------------------
+  \draw[flow] (cand.north) |- (v1.west);
+  \draw[flow] (cand.south) |- (ime.west |- wind.north) -- (ime.north west);
+  \draw[flow] (v1) -- (v2);
+  \draw[flow] (v2) -- (v3);
+  \draw[flow] (v3) -- (dec);
+  \draw[flow] (wind) -- (ime);
+  \draw[flow] (ime) -- (unc);
+  \draw[flow] (unc) -- (est);
+  \draw[flow] (fidx) -- (att);
+  \draw[flow] (att) -- (res);
+  \draw[flow] (res) -- (out);
+  \draw[flow] (dec.south) -- ++(0,-1.4) -| (out.north east);
+  \draw[flow] (est.south) -- (out.north);
+  \draw[dflow] (wind.north) -- ++(0,0.6) -| node[lab,pos=0.2,above] {wind used by stage 3} (v3.south);
+  \draw[flow] (cand.south) |- (att.west |- fidx.north) -- (att.north west);
+
+  \dtitle{A mask is not a verified emission, and a plume near a facility is not that facility's plume}
+         {Level 02 - science chain. Top: verification (FR7). Middle: quantification (FR3). Bottom: attribution (FR3).}
+  \dfoot[22cm]{Rules from the report: poor observations are screened first; checks that rely on related satellite data strengthen consistency but are not independent confirmation;
+    a rate is reported only when its inputs support it (Section 7.1: Unavailable or Uncertain, never an unsupported point estimate); ERA5 is about 31 km and ERA5T lags by about five days, so the wind source and version are stored with every estimate.}
+\end{tikzpicture}
+\end{document}

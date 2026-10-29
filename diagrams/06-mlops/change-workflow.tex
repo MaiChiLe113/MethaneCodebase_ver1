@@ -1,0 +1,48 @@
+% Level 06 - The routine for every change
+% Question answered: what do I do every time I modify something, from picking the task to merging?
+% Facts: report team rules (Jira key MWPMWP-n in commits and PR titles, Definition of Done in Section 7.4, peer review required).
+% Proposals: branch naming and the exact CI checks; both live in .github/workflows/ci.yml and Makefile.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  s/.style={box,blue,text width=3.0cm,align=left,inner sep=4pt,minimum height=2.3cm,font=\sffamily\footnotesize},
+  r/.style={box,grey,text width=3.0cm,align=left,inner sep=4pt,minimum height=2.3cm,font=\sffamily\footnotesize}]
+
+  \node[glabel,anchor=south west] at (-0.2,1.5) {On your laptop};
+  \node[s] (a) at (1.5,0)  {\nm{1  Pick the task}\\ Take the Jira key MWPMWP-n. Read the header of the file and its diagram.};
+  \node[s] (b) at (5.2,0)  {\nm{2  Branch}\\ One branch per key, named with it.};
+  \node[s] (c) at (8.9,0)  {\nm{3  Change}\\ Stay inside the header's import rules. Write or update the test named in docs/requirements.md.};
+  \node[s] (d) at (12.6,0) {\nm{4  Check locally}\\ \texttt{make lint}, \texttt{make contracts}, \texttt{make test}. Model code: add \texttt{make test-ml}.};
+  \node[s] (e) at (16.3,0) {\nm{5  Commit}\\ pre-commit runs ruff and refuses a message without MWPMWP-n.};
+  \node[s] (f) at (20.0,0) {\nm{6  Open a pull request}\\ Key in the title; tick the Definition of Done list.};
+
+  \node[glabel,anchor=south west] at (-0.2,-3.4) {On GitHub};
+  \node[r] (g) at (20.0,-5.0) {\nm{7  CI}\\ ruff, mypy, import contracts, tests, web build, diagram build.};
+  \node[r] (h) at (16.3,-5.0) {\nm{8  Peer review}\\ At least one teammate who is not the author.};
+  \node[r,strong] (i) at (12.6,-5.0) {\nm{9  Merge to main}\\ Only when CI is green and the review is approved.};
+  \node[r] (j) at (8.9,-5.0) {\nm{10  After merge}\\ CI builds the images; Beta only: deploy (see environments-promotion).};
+
+  \foreach \x/\y in {a/b,b/c,c/d,d/e,e/f} {\draw[flow] (\x) -- (\y);}
+  \draw[flow] (f.south) -- (g.north);
+  \draw[flow] (g) -- (h); \draw[flow] (h) -- (i); \draw[flow] (i) -- (j);
+  % loop back
+  \draw[dflow,mwred] (g.south) -- ++(0,-0.9) -| node[lab,pos=0.12,above,text=mwred] {CI red or changes requested: back to step 3} ([xshift=-1.0cm]c.south);
+
+  % extra duties
+  \node[box,red,anchor=north west,text width=21.8cm,align=left,inner sep=6pt,font=\sffamily\footnotesize] at (-0.3,-8.1) {%
+    \nm{Also do this when your change touches one of these}\\[3pt]
+    \begin{tabular}{@{}p{5.2cm}p{16.2cm}@{}}
+    A model or the trainer & Log the run in MLflow. Promotion is a separate act, only through the release gate (Beta: F1 $\ge$ 0.80, FPR $<$ 0.03\%).\\[2pt]
+    Data, recipes or splits & Run \texttt{dvc repro}, commit the new manifest hash, update the dataset card. Never put synthetic ids in the benchmark.\\[2pt]
+    The API contract (schemas, routes) & Run \texttt{scripts/export\_openapi.py} then \texttt{scripts/gen\_ts\_client.sh}; commit both outputs.\\[2pt]
+    \texttt{configs/permissions.yaml} or \texttt{release\_gates.yaml} & Update the test that names the changed cell or number; say why in the pull request. Needs the owner of security (Ha) as reviewer.\\[2pt]
+    A status, estimate or evidence rule & Change the rule test first. Never relax it to make a change pass.\\[2pt]
+    A new package, port or route & Update the matching diagram and run \texttt{make diagrams}; add an ADR if it changes a decision.\\
+    \end{tabular}};
+
+  \dtitle{Every change takes the same ten steps}
+         {Level 06 - change workflow. Blue: your laptop. Grey: GitHub. Red: what to add when the change touches a rule that must not weaken.}
+  \dfoot[22cm]{Branch naming and the exact CI checks are proposals. The Jira key, the Definition of Done and peer review are team rules from the report.}
+\end{tikzpicture}
+\end{document}

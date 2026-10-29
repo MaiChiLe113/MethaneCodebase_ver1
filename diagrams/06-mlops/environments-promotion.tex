@@ -1,0 +1,57 @@
+% Level 06 - Environments and promotion
+% Question answered: what is different between development, CI and production, and what has to be true to move up?
+% Facts: report D12/D13 (DynamoDB on demand; serverless pipeline and EC2 web app), $200 credit, Alpha does not deploy the AWS stack,
+% rollback in 60 s (Beta), Beta promotion gate. Names of CI jobs are proposals.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  hd/.style={box,blue,strong,text width=5.6cm,align=left,inner sep=5pt,minimum height=2.0cm,font=\sffamily\footnotesize},
+  cell/.style={box,grey,text width=5.6cm,align=left,inner sep=3pt,minimum height=1.05cm,font=\sffamily\scriptsize},
+  rl/.style={anchor=east,font=\sffamily\bfseries\scriptsize,text=mwgrey,text width=2.6cm,align=right}]
+
+  % headers
+  \node[hd] (d) at (0,0)    {\nm{Development}\\ Your laptop and the GPU machine. Fast, free, can be broken.};
+  \node[hd] (c) at (7.6,0)  {\nm{CI}\\ GitHub Actions on every pull request. Clean machine, same checks for everyone.};
+  \node[hd] (p) at (15.2,0) {\nm{Production (Beta)}\\ AWS, built by Terraform. Alpha is not deployed; it runs in the first two columns.};
+
+  % rows: label, dev, ci, prod
+  \def\rg{-1.35}
+  \foreach \i/\lbl/\x/\y/\z in {
+    1/Adapters/{memory fakes for unit tests; LocalStack through docker compose}/{LocalStack service container}/{real AWS: S3, DynamoDB, Cognito},
+    2/Data/{small fixtures; real scenes only on the GPU machine}/{fixtures only}/{Sentinel-2 passes through the pipeline},
+    3/Sign-in/{JWT with argon2}/{JWT with argon2}/{Cognito},
+    4/Evidence store/{read-only bucket in LocalStack}/{LocalStack}/{S3 Object Lock, write once},
+    5/Secrets/{.env file, never committed}/{repository secrets}/{managed secrets and keys},
+    6/Cost/{free}/{free tier minutes}/{inside the \$200 credit; budget alarm; GPU work is Spot}} {
+    \node[rl] at (-3.0,\i*\rg-0.7) {\lbl};
+    \node[cell] at (0,\i*\rg-0.7) {\x};
+    \node[cell] at (7.6,\i*\rg-0.7) {\y};
+    \node[cell] at (15.2,\i*\rg-0.7) {\z};
+  }
+
+  % promotion arrows and gates
+  \draw[flow,line width=1.1pt] (d.east |- 0,0.0) -- node[above,lab,text width=1.6cm,align=center,yshift=3pt] {pull request} (c.west |- 0,0.0);
+  \draw[flow,line width=1.1pt] (c.east |- 0,0.0) -- node[above,lab,text width=1.6cm,align=center,yshift=3pt] {merge to main} (p.west |- 0,0.0);
+
+  % gates and release paths below
+  \node[box,blue,anchor=north west,text width=10.6cm,align=left,inner sep=6pt,font=\sffamily\footnotesize] (g1) at (-3.2,-9.6) {%
+    \nm{Code release (Beta)}\\[2pt]
+    1 Merge to main with a green CI and an approved review.\\
+    2 CI builds the api, trainer and web images and tags them with the commit.\\
+    3 \texttt{terraform plan} is read for cost-bearing resources before \texttt{apply}.\\
+    4 Deploy, then a smoke test: sign in, list detections, verify one dossier.\\
+    5 If the smoke test fails: put the previous image back (60 s target).};
+  \node[box,red,anchor=north west,text width=10.6cm,align=left,inner sep=6pt,font=\sffamily\footnotesize] (g2) at (8.0,-9.6) {%
+    \nm{Model release (Beta), separate from code}\\[2pt]
+    1 Run registered in MLflow with its data version and model card.\\
+    2 Real-test score passes the Beta gate (F1 $\ge$ 0.80 and FPR $<$ 0.03\%).\\
+    3 The registry sets \texttt{approved}; the worker loads that version.\\
+    4 Monitoring watches candidate rate and review outcomes.\\
+    5 Regression: set the previous approved version (60 s target).};
+
+  \dtitle{Same code, three environments, two ways to ship}
+         {Level 06 - environments and promotion. Code and models are released separately, so a new model never needs a code deploy.}
+  \dfoot[22cm]{Alpha stays on the laptop and CI by design (report: credit is limited and the AWS stack is a Beta scaffold). Names of CI jobs and the smoke test are proposals for sprint 1.}
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,42 @@
+% Level 04 - Sequence: sign in, then every request is authenticated, authorised and audited
+% Facts: report FR5 / NFR3 (role-based access, deny by default, audit of denied requests), TLS in transit.
+% Token lifetime and refresh are NOT fixed by the report: marked "to decide".
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\input{../_common/mwseq.tex}
+\begin{document}
+\begin{tikzpicture}
+  \lifehead{us}{0}{gold}{User}
+  \lifehead{pt}{3.4}{blue}{Portal}
+  \lifehead{ap}{6.8}{blue}{api/auth\\api/rbac}
+  \lifehead{ar}{10.2}{red}{AuthProvider}
+  \lifehead{rt}{13.6}{blue}{router + service}
+  \lifehead{au}{17.0}{red}{AuditSink}
+  \foreach \x in {0,3.4,6.8,10.2,13.6,17.0} {\life{\x}{-0.5}{-14.8}}
+
+  \msg{0}{3.4}{-1.2}{email + password}
+  \msg{3.4}{6.8}{-2.0}{POST /login (HTTPS)}
+  \msg{6.8}{10.2}{-2.8}{authenticate(credentials)}
+  \ret{10.2}{6.8}{-3.5}{user, role}
+  \ret{6.8}{3.4}{-4.2}{access token (lifetime: to decide)}
+  \snote{10.8}{-3.9}{3.4cm}{Passwords stored as argon2 hashes. Failed logins are audited.}
+
+  \frag{-0.8}{18.4}{-5.0}{-12.4}{every later request}
+  \msg{3.4}{6.8}{-6.2}{request + token}
+  \act{6.8}{-6.0}{-12.0}
+  \msg{6.8}{10.2}{-6.9}{authenticate(token)}
+  \ret{10.2}{6.8}{-7.5}{user, role or reject}
+
+  \fragsep{-0.8}{18.4}{-8.0}{alt: unknown or expired token}
+  \ret{6.8}{3.4}{-8.9}{401}
+  \fragsep{-0.8}{18.4}{-9.3}{alt: role not allowed for this action (deny by default)}
+  \msg{6.8}{17.0}{-10.2}{append(denied request)}
+  \ret{6.8}{3.4}{-10.8}{403}
+  \fragsep{-0.8}{18.4}{-11.2}{alt: allowed}
+  \msg{6.8}{13.6}{-11.9}{call use case}
+
+  \dtitle{Authenticate, authorise, then act; refusals are audited too}
+         {Level 04 - sequence: sign-in and request guard. The portal hides what the API would refuse, but only the API decides.}
+  \dfoot[19cm]{Test required by the report: a matrix over every role and action; every unauthorised request is rejected by the backend. Token lifetime and refresh are decisions for sprint 1 and are not stated in the report.}
+\end{tikzpicture}
+\end{document}

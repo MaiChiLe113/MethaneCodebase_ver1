@@ -1,0 +1,50 @@
+% Level 05 - Split policy
+% Question answered: which data trains, which tunes, and which is allowed to produce a benchmark number?
+% Facts: project notes (synthetic: 1,000,000 train recipes, 20,000 validation, test skipped; fine-tune real train/val/test;
+% final test is real test only, also report the zero-shot pretrained model); report (synthetic never in the benchmark; splits grouped by
+% event, site and date; hashed manifest; optional controlled-release test set).
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  d/.style={box,text width=3.5cm,align=left,inner sep=4pt,minimum height=1.7cm,font=\sffamily\footnotesize}]
+
+  \node[head,anchor=west] at (-0.2,2.4) {Source};
+  \node[head,anchor=west] at (5.2,2.4) {Split};
+  \node[head,anchor=west] at (10.6,2.4) {Used for};
+
+  % row 1: synthetic
+  \node[d,green] (s1) at (1.6,0) {\nm{Synthetic pretraining}\\ MethaneSET backgrounds + simulated plumes};
+  \node[d,grey] (a1) at (6.9,1.1) {\nm{train}\\ 1,000,000 recipes};
+  \node[d,grey] (a2) at (6.9,-1.1) {\nm{validation}\\ 20,000 recipes; test skipped};
+  \node[d,orange,text width=4.2cm] (u1) at (12.5,0) {\nm{Pretraining and early stopping only}\\ Never reported as a result};
+
+  % row 2: real
+  \node[d,green] (s2) at (1.6,-4.4) {\nm{Real fine-tuning data}\\ MethaneSET fine-tune set, real scenes};
+  \node[d,grey] (b1) at (6.9,-3.3) {\nm{train}\\ grouped by event, site, date};
+  \node[d,grey] (b2) at (6.9,-5.5) {\nm{validation}\\ model selection};
+  \node[d,red,strong] (b3) at (6.9,-7.7) {\nm{real test}\\ final scoring only};
+  \node[d,orange,text width=4.2cm] (u2) at (12.5,-4.4) {\nm{Fine-tuning and model selection}};
+  \node[d,red,strong,text width=4.2cm] (u3) at (12.5,-7.7) {\nm{The benchmark}\\ All models, incl. zero-shot pretrained, scored here};
+
+  % optional
+  \node[d,gold,dashed] (s3) at (1.6,-7.7) {\nm{Controlled-release data}\\\tech{optional, if access is granted}};
+
+  \draw[flow] (s1) -- (a1.west); \draw[flow] (s1) -- (a2.west);
+  \draw[flow] (a1.east) -- (u1.west |- a1.east) -- (u1.north west);
+  \draw[flow] (a2.east) -- (u1.west |- a2.east) -- (u1.south west);
+  \draw[flow] (s2) -- (b1.west); \draw[flow] (s2) -- (b2.west); \draw[flow] (s2.south east) -- (b3.north west);
+  \draw[flow] (b1.east) -- (u2.north west); \draw[flow] (b2.east) -- (u2.south west);
+  \draw[flow] (b3) -- (u3);
+  \draw[dflow] (s3) -- (b3);
+
+  % forbidden arrow
+  \draw[red!70!black,line width=1.2pt,-{Stealth[length=3mm]}] (u1.east) -- ++(1.0,0) |- (u3.east);
+  \node[cross out,draw=mwred,line width=1.6pt,minimum size=9pt] at (15.6,-3.8) {};
+  \node[font=\sffamily\bfseries\footnotesize,text=mwred,anchor=west] at (15.8,-3.8) {never};
+
+  \dtitle{Synthetic data teaches; only real data judges}
+         {Level 05 - split policy. A benchmark number can come from the real test split only.}
+  \dfoot[17cm]{Guards the code must enforce: a manifest listing every sample id with its split and a hash; grouping by event, site and date so neighbours cannot leak across splits; a test that fails if any synthetic id appears in the benchmark set.}
+\end{tikzpicture}
+\end{document}

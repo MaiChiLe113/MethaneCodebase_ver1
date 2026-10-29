@@ -1,0 +1,62 @@
+% Level 03 - API routes and the proposed permission matrix
+% Question answered: who may call what, and which calls leave an audit record?
+% Facts: report FR5 / NFR3 (roles analyst, inspector, regulator, ML engineer, admin; deny by default; audit on every state change and export).
+% PROPOSAL: cell values are defaults to confirm with the advisor at sprint planning; an open circle means "decide in sprint 1".
+% The single source of truth in the repository is configs/permissions.yaml; this table is generated from it by hand until a script exists.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  ch/.style={font=\sffamily\bfseries\scriptsize,text=mwink,align=center,text width=1.55cm},
+  ce/.style={font=\sffamily\footnotesize,text=mwink,anchor=west,text width=5.0cm,align=left},
+  cr/.style={font=\sffamily\scriptsize,text=mwgrey,anchor=west,text width=3.0cm,align=left}]
+
+  \def\rh{0.78}
+  \def\xe{0}     % endpoint column
+  \def\xr{5.2}   % router column
+  \def\xa{8.9}   % first role column centre
+  \def\dx{1.65}
+
+  % header
+  \node[ch,anchor=west,text width=5cm,align=left] at (\xe,0) {Endpoint (proposed)};
+  \node[ch,anchor=west,text width=3cm,align=left] at (\xr,0) {Router and use case};
+  \foreach \r/\i in {analyst/0,inspector/1,regulator/2,{ML engineer}/3,admin/4} {\node[ch] at (\xa+\dx*\i,0) {\r};}
+  \node[ch] at (\xa+\dx*5,0) {Audit record};
+  \draw[line width=0.8pt,draw=mwline] (-0.1,-0.35) -- (\xa+\dx*5+0.9,-0.35);
+
+  % row macro: #1 row number, #2 endpoint, #3 router/use case, #4..#8 roles (y, o or empty), #9 audit (y or n)
+  \newcommand{\crow}[9]{%
+    \pgfmathsetmacro{\yy}{-0.35-#1*\rh}
+    \ifodd#1 \fill[mwlight] (-0.1,\yy+0.5*\rh) rectangle (\xa+\dx*5+0.9,\yy-0.5*\rh);\fi
+    \node[ce] at (\xe,\yy) {#2};
+    \node[cr] at (\xr,\yy) {#3};
+    \foreach \v/\i in {#4/0,#5/1,#6/2,#7/3,#8/4} {%
+      \def\tmpy{y}\def\tmpo{o}
+      \ifx\v\tmpy \node[font=\large,text=mwgreen] at (\xa+\dx*\i,\yy) {\yes};\fi
+      \ifx\v\tmpo \node[font=\large,text=mwgrey] at (\xa+\dx*\i,\yy) {$\circ$};\fi}
+    \def\tmpy{y}\def\tmpa{#9}
+    \ifx\tmpa\tmpy \node[font=\large,text=mwred] at (\xa+\dx*5,\yy) {\yes};\fi
+  }
+
+  \crow{1}{GET /detections, /detections/\{id\}, site history}{detections / list}{y}{y}{y}{o}{o}{n}
+  \crow{2}{GET /layers/\{scene\}/tiles}{layers / tile}{y}{y}{y}{o}{n}{n}
+  \crow{3}{POST /detections/\{id\}/review}{review / ReviewDetection}{y}{-}{-}{-}{-}{y}
+  \crow{4}{POST /detections/\{id\}/dossier (build)}{evidence / ExportDossier}{y}{o}{-}{-}{-}{y}
+  \crow{5}{GET /dossiers/\{id\} (download) and /verify}{evidence / verify}{y}{y}{y}{-}{-}{y}
+  \crow{6}{GET /regions}{regions / list}{y}{o}{o}{-}{-}{n}
+  \crow{7}{POST, PUT /regions (alert cadence)}{regions / ConfigureRegion}{y}{-}{-}{-}{-}{y}
+  \crow{8}{GET /models, /metrics}{admin / list}{o}{-}{-}{y}{y}{n}
+  \crow{9}{POST /models/\{v\}/promote}{admin / PromoteModel}{-}{-}{-}{y}{o}{y}
+  \crow{10}{GET, POST /users and /roles}{admin / users}{-}{-}{-}{-}{y}{y}
+  \crow{11}{GET /audit}{admin / audit}{-}{-}{o}{-}{y}{n}
+  \crow{12}{any other request}{rbac default}{-}{-}{-}{-}{-}{y}
+
+  % legend
+  \node[font=\sffamily\scriptsize,anchor=north west,text=mwink] at (-0.1,-0.35-13.2*\rh) {\textcolor{mwgreen}{\yes} allowed \quad \textcolor{mwgrey}{$\circ$} decide in sprint 1 \quad (blank) denied \quad \textcolor{mwred}{\yes} in audit column: an audit entry is written. A denied call is always audited.};
+
+  \dtitle{Deny by default: the matrix is a test, not a comment}
+         {Level 03 - API routes. Proposed endpoints and role permissions; \texttt{configs/permissions.yaml} is the source of truth once confirmed.}
+  \dfoot[21cm]{Report tests (Section 7.1): a permission-matrix test over every role and action; every unauthorised request is rejected by the backend; every review, status change and export creates an audit record.
+    Only an analyst may set a status; an emission is confirmed only when the analyst sets Supported and the evidence is complete.}
+\end{tikzpicture}
+\end{document}

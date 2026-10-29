@@ -1,0 +1,60 @@
+% Level 00 - Use cases
+% Question answered: which actor can do what inside MethaneWatch?
+% Re-drawn from the report's Figure 3.1 (Use Case Diagram of MethaneWatch) so it lives
+% with the code and can be reviewed in pull requests.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  uc/.style={ellipse,draw=mwblue,fill=mwblueL,line width=0.7pt,align=center,text width=2.7cm,
+    minimum height=1.05cm,inner sep=2pt,font=\sffamily\footnotesize},
+  assoc/.style={line width=0.7pt,draw=mwline},
+  rel/.style={->,dashed,line width=0.7pt,draw=mwline}]
+
+  % ---- use cases ------------------------------------------------------------
+  \node[uc] (conf)  at (-3.4, 4.2)  {Configure monitored areas};
+  \node[uc] (rev)   at (-3.4, 2.4)  {Review plume detections};
+  \node[uc] (corr)  at (-3.4, 0.5)  {Correct plume mask};
+  \node[uc] (view)  at ( 0.0,-1.3)  {View monitoring map and history};
+  \node[uc] (val)   at (-3.4,-3.2)  {Validate emission estimate};
+  \node[uc] (det)   at ( 3.4, 4.2)  {Detect methane plumes};
+  \node[uc] (est)   at ( 3.4, 2.1)  {Estimate emission rate};
+  \node[uc] (exp)   at ( 3.4,-2.9)  {Export plume report / alert draft};
+  \node[uc] (upd)   at ( 3.4,-4.8)  {Update detection model};
+
+  \begin{scope}[on background layer]
+    \node[group,fit=(conf)(rev)(corr)(view)(val)(det)(est)(exp)(upd),draw=mwblue,
+      fill=mwblueL!35,inner sep=10pt,dashed=false,rounded corners=6pt] (bound) {};
+  \end{scope}
+  \node[glabel,text=mwblue] at (bound.north west) {MethaneWatch};
+
+  % ---- actors ---------------------------------------------------------------
+  \node[actor,text width=2.9cm,left=14mm of bound.west |- rev] (an) {\bfseries Remote sensing analyst};
+  \node[actor,text width=2.9cm,left=14mm of bound.west |- val] (ins) {\bfseries Government environment inspector};
+  \node[actor,text width=2.9cm,right=14mm of bound.east |- exp,yshift=1.2cm] (reg) {\bfseries Alert body / regulator};
+  \node[actor,text width=2.9cm,right=14mm of bound.east |- upd] (ml) {\bfseries ML engineer (model maintainer)};
+  \node[ext,text width=2.9cm,right=14mm of bound.east |- det] (s2) {\bfseries Sentinel-2 data hub\\[-1pt]\scriptsize\textit{system actor}};
+  \node[ext,text width=2.9cm,right=14mm of bound.east |- est] (wx) {\bfseries Weather data service\\[-1pt]\scriptsize\textit{system actor}};
+
+  % ---- associations ---------------------------------------------------------
+  \draw[assoc] (an) -- (conf);
+  \draw[assoc] (an) -- (rev);
+  \draw[assoc] (an.south) to[out=-90,in=180] (view.west);
+  \draw[assoc] (ins) -- (val);
+  \draw[assoc] (ins.north east) to[out=25,in=-155] (view.south west);
+  \draw[assoc] (reg) -- (view);
+  \draw[assoc] (reg) -- (exp);
+  \draw[assoc] (ml) -- (upd);
+  \draw[assoc] (s2) -- (det);
+  \draw[assoc] (wx) -- (est);
+
+  % ---- include / extend -----------------------------------------------------
+  \draw[rel] (corr) -- node[lab,right,xshift=2pt] {$\ll$extend$\gg$} (rev);
+  \draw[rel] (det) -- node[lab,right,xshift=2pt] {$\ll$include$\gg$} (est);
+
+  \dtitle{Analysts and inspectors work the map; the system does the detecting}
+         {Level 00 - use cases (report Figure 3.1). Dashed arrows are UML include and extend relations.}
+  \dfoot[15cm]{Maps to requirements: FR1-FR3 (detect, estimate), FR4 (alert drafts), FR5 (who may do what), FR6 (map and history),
+    FR7 (review and correct).}
+\end{tikzpicture}
+\end{document}

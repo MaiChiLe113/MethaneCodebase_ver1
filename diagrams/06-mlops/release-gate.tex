@@ -1,0 +1,35 @@
+% Level 06 - Release gate
+% Question answered: what must be true before a model version is promoted, and what happens if it misbehaves?
+% Facts: report Alpha targets IoU >= 0.70 and F1 >= 0.75 (research targets), Beta promotion gate F1 >= 0.80 and FPR < 0.03%, rollback in 60 s.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  c/.style={box,text width=4.0cm,align=left,inner sep=5pt,minimum height=2.0cm,font=\sffamily\footnotesize}]
+
+  \node[c,orange] (cand) at (0,0) {\nm{Candidate model}\\ A registered run with its data version and model card};
+  \node[c,orange] (eval) at (5.0,0) {\nm{Real test score}\\ IoU, F1, false-positive rate on the sealed real test; zero-shot pretrained model reported beside it};
+  \node[box,diamond,aspect=2.2,draw=mwred,fill=mwredL,strong,inner sep=1pt,text width=3.4cm,align=center,font=\sffamily\footnotesize] (dec) at (11.0,0) {\nm{Beta gate}\\ F1 $\ge$ 0.80\\ FPR $<$ 0.03\%};
+  \node[c,blue] (pro) at (17.0,1.8) {\nm{Promote}\\ approved = true; recorded with who and when};
+  \node[c,grey] (hold) at (17.0,-1.8) {\nm{Hold}\\ Not promoted; the report states why};
+
+  \draw[flow] (cand) -- (eval); \draw[flow] (eval) -- (dec);
+  \draw[flow] (dec.east) -- ++(0.6,0) |- node[lab,pos=0.25,left] {pass} (pro.west);
+  \draw[flow] (dec.east) ++(0,0) -- ++(0.6,0) |- node[lab,pos=0.25,left] {fail} (hold.west);
+
+  \node[c,teal,minimum height=1.7cm] (rb) at (17.0,-5.0) {\nm{Rollback}\\ Previous approved version live in 60 s};
+  \draw[dflow] (pro.south east) -- ++(1.4,0) |- (rb.east);
+  \node[lab,anchor=west] at (20.0,-2.0) {regression in production};
+
+  % Alpha vs Beta panel
+  \node[box,gold,text width=10.2cm,align=left,inner sep=6pt,font=\sffamily\footnotesize,anchor=north west] at (-2.0,-3.1) {%
+    \nm{Two different numbers}\\[3pt]
+    \textbf{Alpha research targets:} IoU $\ge$ 0.70 and F1 $\ge$ 0.75 on the real test. Measured and reported for every model in the benchmark. A model that misses them is still a valid result.\\[3pt]
+    \textbf{Beta promotion gate:} F1 $\ge$ 0.80 and FPR $<$ 0.03\%. Applies only to the model that serves users.\\[3pt]
+    They are stored in separate keys of \texttt{configs/release\_gates.yaml}, so one cannot be read as the other.};
+
+  \dtitle{A number in a report is not a permission to ship}
+         {Level 06 - release gate. Alpha targets describe research; the Beta gate controls promotion; rollback is the safety net.}
+  \dfoot[21cm]{Test required: the gate is a function with unit tests (pass, fail, boundary values), and the registry refuses to set \texttt{approved} when it returns fail.}
+\end{tikzpicture}
+\end{document}

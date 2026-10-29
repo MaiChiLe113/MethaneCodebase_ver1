@@ -1,0 +1,62 @@
+% Level 03 - Model zoo
+% Question answered: how do all candidate models plug into one training and evaluation pipeline?
+% Facts: report model choices: U-Net and ViT-UNet principal baselines, classical methods as reference, SAM4CH4 zero-shot reference,
+% VMamba / CD-Mamba / kMetha-Mamba secondary, ST-CM-UNet proposed hybrid CNN-Mamba. Input tensor (B,7,2,100,100) plus ref_valid.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  m/.style={box,orange,text width=3.5cm,align=left,inner sep=4pt,minimum height=2.0cm,font=\sffamily\footnotesize},
+  tier/.style={font=\sffamily\bfseries\footnotesize,text=mwgrey,anchor=south west}]
+
+  % interface
+  \node[box,blue,strong,text width=17.2cm,align=left,inner sep=6pt,minimum height=2.2cm] (itf) at (7.4,0) {%
+    \nm{models/base.py: SegmentationModel}\hfill\tech{Protocol}\\[2pt]\footnotesize
+    \texttt{forward(x: Tensor[B,7,2,H,W], ref\_valid: Tensor[B,7]) -> logits: Tensor[B,1,H,W]}\\[2pt]
+    \texttt{name}, \texttt{input\_contract}, \texttt{param\_count}, \texttt{from\_config(cfg)}. Every model returns logits at the input resolution so that the losses, metrics and inference code never change.};
+
+  % registry
+  \node[box,blue,text width=5.0cm,align=left,inner sep=4pt,minimum height=1.6cm,font=\sffamily\footnotesize] (reg) at (7.4,-2.7) {\nm{models/registry.py}\\ Name from YAML to class. Adding a model means one file, one registry line, one config.};
+
+  % tiers
+  \node[tier] at (-2.0,-4.55) {Reference (not trained)};
+  \node[m,grey] (cl) at (0,-6.2) {\nm{classical/}\\ Threshold and band-ratio methods on B11 and B12. A floor every learned model must beat.\\\tech{owner: Chi}};
+  \node[m,grey] (sam) at (3.9,-6.2) {\nm{sam4ch4/}\\ Zero-shot SAM-based reference, inference only.\\\tech{owner: Ha}};
+
+  \node[tier] at (8.3,-4.55) {Principal baselines (trained)};
+  \node[m] (un) at (7.8,-6.2) {\nm{unet/}\\ Convolutional baseline; reference scenes stacked as channels.\\\tech{owner: Chi}};
+  \node[m] (vit) at (11.7,-6.2) {\nm{vit\_unet/}\\ Vision-transformer encoder with a U-Net decoder.\\\tech{owner: Ha}};
+
+  \node[tier] at (-2.0,-8.0) {Secondary (state-space)};
+  \node[m] (vm) at (0,-9.6) {\nm{mamba/vmamba.py}\\ Vision Mamba segmentation.\\\tech{owner: Hai}};
+  \node[m] (cd) at (3.9,-9.6) {\nm{mamba/cd\_mamba.py}\\ Change-detection Mamba that compares target and references.\\\tech{owner: Hai}};
+  \node[m] (km) at (7.8,-9.6) {\nm{mamba/kmetha.py}\\ Methane-specific Mamba variant.\\\tech{owner: Hai}};
+
+  \node[tier] at (11.0,-8.0) {Proposed};
+  \node[m,strong] (st) at (11.7,-9.6) {\nm{st\_cm\_unet/}\\ Hybrid CNN and Mamba U-Net. The model the project argues for.\\\tech{owner: Hai}};
+
+  % shared blocks
+  \node[box,teal,text width=3.5cm,align=left,inner sep=4pt,minimum height=2.0cm,font=\sffamily\footnotesize] (sel) at (15.6,-9.6) {\nm{mamba/scan\_fallback.py}\\ Pure PyTorch selective scan when no CUDA (the laptop has none).};
+  \node[box,green,text width=3.5cm,align=left,inner sep=4pt,minimum height=2.0cm,font=\sffamily\footnotesize] (inp) at (15.6,-6.2) {\nm{data/DataLoader}\\ Produces the 5D tensor and \texttt{ref\_valid}. The same loader feeds every model.};
+
+  % arrows
+  \draw[flow] (reg.north) -- (itf.south);
+  \draw[dflow] (inp.north) -- ++(0,1.2) -| (itf.south east);
+  \draw[dflow] (sel.west) -- (st.east);
+
+  \begin{scope}[on background layer]
+    \node[group,fit=(cl)(sam),draw=mwgrey,inner sep=7pt] {};
+    \node[group,fit=(un)(vit),draw=mworange,inner sep=7pt] {};
+    \node[group,fit=(vm)(cd)(km),draw=mworange,inner sep=7pt] {};
+    \node[group,fit=(st),draw=mworange,inner sep=7pt] {};
+    \node[group,fit=(cl)(sam)(un)(vit)(vm)(cd)(km)(st),draw=mworange,solid,line width=1pt,inner sep=24pt] (zoo) {};
+  \end{scope}
+
+  \draw[flow] (zoo.north |- reg.south) -- node[lab,right,xshift=1mm] {each class implements the Protocol} (reg.south);
+
+  \dtitle{Eight candidates, one interface: a fair comparison is built into the code}
+         {Level 03 - model zoo. All models take the same tensor, return logits at the same resolution, and are trained and scored by the same code on the same split.}
+  \dfoot[20cm]{Why this shape: the benchmark compares models, so the comparison itself must not depend on per-model glue. Anything a model needs that others do not (the Mamba scan) lives inside that model's folder.
+    Owners are proposals from the report's team table, confirmed at sprint planning.}
+\end{tikzpicture}
+\end{document}

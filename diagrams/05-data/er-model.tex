@@ -1,0 +1,35 @@
+% Level 05 - Storage model (DynamoDB tables and S3 buckets)
+% Question answered: where does each entity of the domain model live, and which question does each key answer?
+% Facts: report D12 (DynamoDB on-demand), D13, NFR2 (write-once evidence vault), NFR3 (immutable audit).
+% PROPOSAL: key names are a sprint-1 design to confirm with a spike; the entities themselves are in 03-code/domain-model.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  t/.style={box,blue,text width=5.6cm,align=left,inner sep=5pt,minimum height=3.0cm,font=\sffamily\footnotesize},
+  b/.style={box,green,text width=5.6cm,align=left,inner sep=5pt,minimum height=2.3cm,font=\sffamily\footnotesize}]
+
+  \node[head,anchor=west] at (-2.9,2.1) {DynamoDB (on demand)};
+
+  \node[t] (det) at (0,0) {\nm{detections}\\\tech{items: Detection, Review}\\ PK \texttt{DET\#id}\\ SK \texttt{DETECTION} or \texttt{REV\#time}\\ GSI1: \texttt{REGION\#id} / date\\ GSI2: latest status / date\\[2pt] \emph{Serves:} list by region and date, filter by status, a candidate with its review history. Reviews are append-only.};
+  \node[t] (reg) at (6.3,0) {\nm{regions}\\\tech{item: Region}\\ PK \texttt{REGION\#id}\\ GSI: owner\\[2pt] \emph{Serves:} regions and alert cadence per user.};
+  \node[t] (usr) at (12.6,0) {\nm{users}\\\tech{item: User}\\ PK \texttt{USER\#id}\\ GSI: email\\[2pt] \emph{Serves:} sign-in and role lookup. Passwords only as argon2 hashes.};
+
+  \node[t,red] (aud) at (0,-3.6) {\nm{audit}\\\tech{item: AuditEntry}\\ PK \texttt{AUDIT\#month} \quad SK sequence number\\ Conditional write: refuse if the key exists\\[2pt] \emph{Serves:} who did what, when; chain check walks the keys in order. Never updated.};
+  \node[t] (dos) at (6.3,-3.6) {\nm{dossiers}\\\tech{item: EvidenceDossier (metadata only)}\\ PK \texttt{DET\#id} \quad SK \texttt{DOSSIER\#id}\\[2pt] \emph{Serves:} find the file and its digest for a detection. The files live in S3.};
+  \node[t,orange] (mod) at (12.6,-3.6) {\nm{models}\\\tech{item: ModelVersion}\\ PK \texttt{MODEL\#version}\\ GSI: approved flag\\[2pt] \emph{Serves:} which version is live and which one to roll back to.};
+
+  \node[head,anchor=west] at (-2.9,-6.2) {S3 buckets (pointers from the items above)};
+  \node[b] (lake) at (0,-8.0) {\nm{data lake}\\ Scenes and chips, masks, enhancement maps, predictions. Versioned. Referenced by \texttt{mask\_uri} and \texttt{uri}.};
+  \node[b,red,strong] (vault) at (6.3,-8.0) {\nm{evidence vault}\\ Dossier PDF, manifest, signature. Object Lock (write once) in Beta; a read-only bucket locally.};
+  \node[b,orange] (ml) at (12.6,-8.0) {\nm{MLflow artefacts}\\ Weights, configs and metrics per run. The registry decides which run is approved.};
+
+  \draw[dflow] (det.west) -- ++(-0.35,0) |- (lake.west);
+  \draw[dflow] (dos.south) -- (vault.north);
+  \draw[dflow] (mod.south) -- (ml.north);
+
+  \dtitle{Entities as tables, files as pointers}
+         {Level 05 - storage model. One table per access pattern family; large files stay in S3 and the tables keep only the uri and digest.}
+  \dfoot[19cm]{DynamoDB on demand is decision D12 of the report; the key design here is a proposal. Every table is created by the same code against LocalStack, so the keys can be tested before any AWS spend.}
+\end{tikzpicture}
+\end{document}

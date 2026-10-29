@@ -1,0 +1,78 @@
+# pyproject.toml: SKELETON. Package names are listed without version pins on purpose;
+# pin them with `uv lock` when the first real module lands (see docs/adr/0002).
+[project]
+name = "methanewatch"
+version = "0.0.0"
+description = "Satellite methane plume segmentation, verification and evidence (COS40005 Project A)"
+requires-python = ">=3.11,<3.14"
+dependencies = ["pydantic", "pyyaml", "numpy"]
+
+[project.optional-dependencies]
+ml = ["torch", "rasterio", "shapely", "pyproj", "xarray", "pystac-client", "tacoreader", "cdsapi", "mlflow", "pandas", "pyarrow"]
+mamba = ["mamba-ssm"]            # CUDA only; the pure PyTorch fallback runs without it
+api = ["fastapi", "uvicorn", "boto3", "argon2-cffi", "pyjwt", "reportlab", "cryptography", "typer"]
+dev = ["pytest", "hypothesis", "moto", "ruff", "mypy", "import-linter", "pre-commit", "httpx"]
+
+[project.scripts]
+mw = "methanewatch.cli.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/methanewatch"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: needs LocalStack", "ml: model zoo tests"]
+
+# ---- import contracts: the machine-checked form of the dependency diagram ----
+[tool.importlinter]
+root_package = "methanewatch"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers: delivery > services > training > inference/evaluation > capabilities > data > ports > domain > core"
+type = "layers"
+layers = [
+  "methanewatch.api | methanewatch.workers | methanewatch.cli",
+  "methanewatch.services",
+  "methanewatch.training",
+  "methanewatch.inference | methanewatch.evaluation",
+  "methanewatch.models | methanewatch.verification | methanewatch.quantification | methanewatch.attribution | methanewatch.evidence",
+  "methanewatch.data",
+  "methanewatch.ports",
+  "methanewatch.domain",
+  "methanewatch.core",
+]
+
+[[tool.importlinter.contracts]]
+name = "Science and ML never import the cloud or the web"
+type = "forbidden"
+source_modules = [
+  "methanewatch.core", "methanewatch.domain", "methanewatch.ports", "methanewatch.data",
+  "methanewatch.models", "methanewatch.training", "methanewatch.evaluation", "methanewatch.inference",
+  "methanewatch.verification", "methanewatch.quantification", "methanewatch.attribution",
+  "methanewatch.evidence", "methanewatch.services",
+]
+forbidden_modules = ["boto3", "fastapi", "pystac", "cdsapi"]
+
+[[tool.importlinter.contracts]]
+name = "Adapters do not reach back into delivery or use cases"
+type = "forbidden"
+source_modules = ["methanewatch.adapters"]
+forbidden_modules = ["methanewatch.services", "methanewatch.api", "methanewatch.workers", "methanewatch.cli"]

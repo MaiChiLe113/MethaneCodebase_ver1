@@ -1,0 +1,47 @@
+% Level 04 - Sequence: analyst reviews a candidate
+% Question answered: what happens between "analyst opens a candidate" and "status is recorded and audited"?
+% Facts: report FR5/FR7 (four statuses, review record with reviewer, time, reason, evidence references), NFR3 (audit), Section 7.1.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\input{../_common/mwseq.tex}
+\begin{document}
+\begin{tikzpicture}
+  \lifehead{an}{0}{gold}{Analyst}
+  \lifehead{pt}{3.4}{blue}{Portal}
+  \lifehead{ap}{6.8}{blue}{API\\auth, rbac}
+  \lifehead{rv}{10.2}{blue}{services\\ReviewDetection}
+  \lifehead{rp}{13.6}{teal}{Repositories}
+  \lifehead{au}{17.0}{red}{AuditSink}
+  \foreach \x in {0,3.4,6.8,10.2,13.6,17.0} {\life{\x}{-0.5}{-14.4}}
+
+  \msg{0}{3.4}{-1.2}{open candidate}
+  \msg{3.4}{6.8}{-2.0}{GET /detections/\{id\} + token}
+  \act{6.8}{-1.8}{-3.4}
+  \selfmsg{6.8}{-2.3}{authenticate, authorise}
+  \msg{6.8}{13.6}{-3.2}{get(detection\_id)}
+  \ret{13.6}{3.4}{-3.9}{mask, enhancement, wind, past scenes, proposal}
+  \ret{3.4}{0}{-4.5}{evidence and uncertainty shown}
+
+  \msg{0}{3.4}{-5.5}{choose status + reason}
+  \msg{3.4}{6.8}{-6.3}{POST /detections/\{id\}/review}
+  \act{6.8}{-6.1}{-13.0}
+  \msg{6.8}{10.2}{-7.1}{review(id, status, reason, refs)}
+  \act{10.2}{-6.9}{-12.3}
+
+  \frag{9.7}{16.1}{-7.5}{-10.8}{checks}
+  \selfmsg{10.2}{-8.3}{reason required}
+  \selfmsg{10.2}{-9.2}{Supported needs complete evidence}
+  \selfmsg{10.2}{-10.1}{reviewer is the caller, not editable}
+
+  \msg{10.2}{13.6}{-11.5}{append Review (never overwrite)}
+  \msg{10.2}{17.0}{-12.2}{append(user, action, target)}
+  \ret{6.8}{3.4}{-12.9}{201: new latest\_status}
+  \ret{3.4}{0}{-13.6}{status shown; history intact}
+
+  \snote{-1.6}{-7.4}{3.0cm}{If rbac refuses (not an analyst): 403 and a denied-request audit entry; no Review is written.}
+
+  \dtitle{A review adds a record; it never edits the past}
+         {Level 04 - sequence: analyst review. An emission is confirmed only when an analyst sets Supported and the evidence is complete.}
+  \dfoot[19cm]{Uncertain is shown as Uncertain everywhere in the portal; it cannot be read as Confirmed. A later review supersedes an earlier one, and both stay in the history.}
+\end{tikzpicture}
+\end{document}

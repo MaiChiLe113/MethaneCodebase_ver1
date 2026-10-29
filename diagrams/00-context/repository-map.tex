@@ -1,0 +1,38 @@
+% Level 00 - Repository map
+% Question answered: what is each folder of the repository for, and why is it separate?
+% Row colours follow the colour code in diagrams/README.md.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  pth/.style={box,anchor=west,text width=4.6cm,align=left,font=\ttfamily\footnotesize,minimum height=9mm},
+  why/.style={anchor=west,text width=8.4cm,align=left,font=\sffamily\footnotesize,inner sep=3pt},
+  own/.style={anchor=west,text width=2.6cm,align=left,font=\sffamily\scriptsize,text=mwgrey,inner sep=3pt}]
+
+  \def\row#1#2#3#4{%
+    \node[pth,#1] (p#2) at (0,-#2*1.3) {#3};
+    \node[why] at ([xshift=2mm]p#2.east) {#4};
+    }
+
+  \node[anchor=west,head,text=mwgrey] at (0,0.1) {Folder};
+  \node[anchor=west,head,text=mwgrey] at (4.8,0.1) {Why it exists, and why it is separate};
+
+  \row{grey}{1}{diagrams/}{Architecture diagrams from abstract to detailed. LaTeX/TikZ source plus rendered PDF and SVG, so design is reviewed in pull requests.}
+  \row{grey}{2}{docs/}{Decisions (ADRs), requirement traceability, work breakdown, runbook, model and dataset cards.}
+  \row{grey}{3}{configs/}{Experiments, release gates and the permission matrix as data. Reviewed and frozen like code, but changeable without a code edit.}
+  \row{blue}{4}{src/methanewatch/\{core, domain, ports\}}{Shared kernel, pure rules and interfaces. No file, network or cloud calls. Changes least, so everything else may depend on it.}
+  \row{orange}{5}{src/methanewatch/\{data, models, training, evaluation, inference\}}{The ML research chain behind one model interface, so a new architecture is one file plus one YAML.}
+  \row{purple}{6}{src/methanewatch/\{verification, quantification, attribution\}}{The science the report requires to be separate from segmentation: a mask is not a verified emission or a rate.}
+  \row{red}{7}{src/methanewatch/evidence}{Integrity (hashes, provenance, signatures, audit chain) is not scientific correctness, so it is its own package.}
+  \row{blue}{8}{src/methanewatch/services}{Use cases that orchestrate the packages above through ports. The only place business flow lives.}
+  \row{teal}{9}{src/methanewatch/adapters}{The only code that imports boto3, pystac, cdsapi or touches disk. Swap LocalStack for AWS here and nowhere else.}
+  \row{blue}{10}{src/methanewatch/\{api, workers, cli\}}{Delivery: HTTP (FastAPI), event handlers (Beta), command line. Chooses adapters at start-up.}
+  \row{blue}{11}{web/}{React portal. Talks to the API over HTTP only, using a generated client, so it can be built against a mock.}
+  \row{grey}{12}{tests/}{unit, integration, e2e, ml, fixtures. Mirrors src/ so each package's tests are easy to find and own.}
+  \row{teal}{13}{infra/, docker/}{Terraform modules (Beta scaffold) and container images for api, trainer (CUDA) and web.}
+  \row{grey}{14}{notebooks/, scripts/}{Tutor demo notebook only; one-off helpers. Neither is imported by src/, so no logic hides in them.}
+  \dtitle{One folder per reason to change}
+         {Level 00 - repository map. Blue: MethaneWatch code. Red: evidence. Grey: infrastructure and support.}
+  \dfoot[15cm]{Who owns which folder and file is in docs/assignments.md.}
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,40 @@
+% Level 02 - Inference service components
+% Question answered: how does a scene become candidate plume objects?
+% Facts: report D3 (L1C, B11/B12, target + up to 6 references), NFR1 (15 minutes per 10 x 10 km granule).
+% Derived: a chip is 100 x 100 pixels at 20 m = 2 x 2 km, so a 10 x 10 km granule is 25 chips.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  c/.style={box,text width=3.0cm,align=left,inner sep=4pt,minimum height=1.9cm,font=\sffamily\footnotesize}]
+
+  \node[c,green] (in) at (0,0) {\nm{Scene stack}\\ One target scene and up to six reference scenes of the same site, B11 and B12 at 20 m};
+  \node[c,green] (chip) at (4.0,0) {\nm{inference/tiling}\\ Cut the granule into 100 x 100 chips (25 for 10 x 10 km); build ref\_valid};
+  \node[c,orange] (pre) at (8.0,0) {\nm{inference/preprocess}\\ Same normalisation as training; shape and band checks};
+  \node[c,orange,strong] (pred) at (12.0,0) {\nm{inference/predictor}\\\tech{approved model}\\ Forward pass, per-pixel plume probability};
+  \node[c,orange] (thr) at (12.0,-3.4) {\nm{inference/postprocess}\\ Threshold fixed on validation; drop objects below minimum size};
+  \node[c,orange] (cc) at (8.0,-3.4) {\nm{connected components}\\ One object per plume candidate; merge across chip borders};
+  \node[c,blue] (poly) at (4.0,-3.4) {\nm{inference/polygonise}\\ Georeferenced polygons (GeoJSON) and raster overlay};
+  \node[c,blue,strong] (out) at (0,-3.4) {\nm{Candidate objects}\\ Mask URI, confidence, bounding box, model version, scene id};
+
+  \node[c,grey,dashed,minimum height=1.5cm] (reg) at (12.0,3.1) {\nm{Model registry}\\ Loaded once per worker; version stored on every result};
+  \node[c,purple,minimum height=1.5cm] (next) at (-4.0,-3.4) {\nm{Science chain}\\ verification, IME, attribution (see science-chain)};
+  \node[c,red,minimum height=1.5cm,text width=3.4cm] (bad) at (4.0,3.1) {\nm{Unusable input}\\ Clouds or invalid pixels: no prediction is trusted; goes to review as Unreviewable};
+
+  \draw[flow] (in) -- (chip);
+  \draw[flow] (chip) -- (pre);
+  \draw[flow] (pre) -- (pred);
+  \draw[flow] (pred) -- (thr);
+  \draw[flow] (thr) -- (cc);
+  \draw[flow] (cc) -- (poly);
+  \draw[flow] (poly) -- (out);
+  \draw[flow] (out) -- (next);
+  \draw[dflow] (reg) -- (pred);
+  \draw[dflow] (chip.north) -- (bad.south);
+
+  \dtitle{A granule is 25 chips; every chip carries its own validity mask}
+         {Level 02 - inference service. Same code path locally and in the Beta GPU worker; only the model file and the adapters change.}
+  \dfoot[17cm]{Target budget (NFR1): ingestion, preprocessing and inference for one 10 x 10 km granule within 15 minutes on a standard GPU instance, measured once all inputs are available.
+    The 24 h figure is separate: satellite pass to candidate mask, a Beta target.}
+\end{tikzpicture}
+\end{document}

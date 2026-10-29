@@ -1,0 +1,12 @@
+# .github/workflows/ci.yml
+#
+# STATUS: PLACEHOLDER. No implementation yet; this file fixes the name, place and contract.
+#
+# Purpose        : CI: ruff, mypy, import-linter, pytest, web build and tests, diagram build
+#                  check.
+# Why it exists  : Every pull request must pass the same gates as the Definition of Done.
+# Requirements   : NFR5
+# Stage          : Alpha
+# Proposed owner : Nam (confirm at sprint planning)
+# Backlog / Jira : assign at sprint planning (report Table 6.1); commits and PR titles carry
+#                  MWPMWP-<n>

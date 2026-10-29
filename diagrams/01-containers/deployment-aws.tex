@@ -1,0 +1,77 @@
+% Level 01 - AWS deployment (Beta scaffold)
+% Question answered: how do the containers map onto AWS services, and which Terraform module owns each?
+% Facts: report Table 5.1.1 and Figures 5.2.1 to 5.2.4. Nothing here is deployed in Alpha.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  aws/.style={box,teal,text width=2.5cm,align=center,inner sep=4pt,minimum height=1.15cm,font=\sffamily\footnotesize},
+  awsn/.style={box,teal,text width=2.5cm,align=center,inner sep=4pt,minimum height=1.15cm,font=\sffamily\footnotesize,dashed}]
+
+  % ============ Band 1: web application =====================================================
+  \node[actor,text width=1.8cm,minimum height=1.15cm] (users) at (0,0) {\bfseries Users};
+  \node[aws] (alb) at (3.6,0) {\textbf{Load balancer}\\ HTTPS only};
+  \node[aws,blue,minimum width=4.6cm,text width=4.3cm,minimum height=1.5cm] (ec2) at (8.1,0) {\textbf{EC2 Auto Scaling group}\\ portal + API containers; roles instead of stored keys};
+  \node[aws,red] (cog) at (12.9,1.5) {\textbf{Cognito}\\ login and roles};
+  \node[aws,green] (ddb) at (12.9,0) {\textbf{DynamoDB}\\ on-demand, with Streams};
+  \node[aws,green] (s3) at (12.9,-1.5) {\textbf{S3 data lake}\\ scenes, masks, rasters};
+  \node[aws,red] (lock) at (16.0,-1.5) {\textbf{S3 Object Lock}\\ evidence vault (KMS)};
+  \node[aws,red] (cw) at (16.0,0) {\textbf{CloudWatch, CloudTrail}\\ logs and audit};
+
+  \draw[flow] (users) -- (alb);
+  \draw[flow] (alb) -- (ec2);
+  \draw[flow] (ec2.east) -- (cog.west |- ec2.east) |- (cog.west);
+  \draw[flow] (ec2) -- (ddb);
+  \draw[flow] (ec2.south east) -- ++(0.5,-0.5) -| (s3.west);
+  \draw[dflow] (ec2.south) -- ++(0,-2.35) -| (lock.south);
+
+  % ============ Band 2: serverless pipeline =================================================
+  \node[aws,teal,fill=white,draw=mwgrey,dashed] (s2) at (0,-4.6) {\textbf{Sentinel-2}\\ AWS Open Data};
+  \node[aws] (sns) at (3.4,-4.6) {\textbf{SNS}\\ new-scene event};
+  \node[aws] (sqs) at (6.8,-4.6) {\textbf{SQS}\\ job queue, retries};
+  \node[aws] (lam) at (10.2,-4.6) {\textbf{Lambda}\\ fetch scenes for user regions};
+  \node[aws,green] (s3b) at (13.6,-4.6) {\textbf{S3 data lake}\\ new and past scenes};
+
+  \node[aws,minimum width=3.3cm] (sf1) at (3.4,-7.2) {\textbf{Step Functions}\\ start: get ERA5 wind};
+  \node[aws,purple,minimum width=3.3cm] (batch) at (7.2,-7.2) {\textbf{AWS Batch GPU (Spot)}\\ detect plumes, timeout and retry};
+  \node[aws,purple,minimum width=3.3cm] (ime) at (11.0,-7.2) {\textbf{Lambda}\\ IME rate, uncertainty, likely source};
+  \node[aws,green,minimum width=3.3cm] (ddb2) at (14.8,-7.2) {\textbf{DynamoDB}\\ save results};
+  \node[aws] (sns2) at (14.8,-9.6) {\textbf{SNS}\\ digest per region per pass};
+  \node[actor,text width=2.4cm,minimum height=1.0cm] (inbox) at (11.0,-9.6) {\bfseries User inbox};
+
+  \draw[flow] (s2) -- (sns);
+  \draw[flow] (sns) -- (sqs);
+  \draw[flow] (sqs) -- (lam);
+  \draw[flow] (lam) -- (s3b);
+  \draw[flow] (s3b.south) -- ++(0,-0.6) -| node[lab,pos=0.2,above] {each new image starts one run} (sf1.north);
+  \draw[flow] (sf1) -- (batch);
+  \draw[flow] (batch) -- (ime);
+  \draw[flow] (ime) -- (ddb2);
+  \draw[flow] (ddb2) -- (sns2);
+  \draw[flow] (sns2) -- (inbox);
+
+  % ============ Band 3: MLOps =========================================================
+  \node[aws,orange,minimum width=3.3cm] (sm) at (0.0,-12.2) {\textbf{SageMaker training (Spot)}\\ pretrain, fine-tune};
+  \node[aws,orange,minimum width=3.3cm] (reg) at (3.6,-12.2) {\textbf{Model registry}\\ approved versions only};
+  \node[aws,orange,minimum width=3.3cm] (ecr) at (7.2,-12.2) {\textbf{ECR}\\ inference image};
+  \draw[flow] (sm) -- (reg);
+  \draw[flow] (reg) -- (ecr);
+  \draw[flow] (ecr.north) -- (batch.south);
+
+  % ---- Terraform module boxes ------------------------------------------------------
+  \begin{scope}[on background layer]
+    \node[group,fit=(users)(alb)(ec2)(cog)(ddb)(s3)(lock)(cw),draw=mwblue,fill=mwblueL!25,inner sep=10pt] (m1) {};
+    \node[group,fit=(s2)(sns)(sqs)(lam)(s3b)(sf1)(batch)(ime)(ddb2)(sns2)(inbox),draw=mwteal,fill=mwtealL!25,inner sep=10pt] (m2) {};
+    \node[group,fit=(sm)(reg)(ecr),draw=mworange,fill=mworangeL!25,inner sep=10pt] (m3) {};
+  \end{scope}
+  \node[glabel,text=mwblue] at (m1.north west) {module web\_app};
+  \node[glabel,text=mwteal] at (m2.north west) {module data\_pipeline  (event-driven, nothing runs between satellite passes)};
+  \node[glabel,text=mworange] at (m3.north west) {module mlops};
+  \node[glabel,text=mwred,anchor=north east] at (m1.north east) {module security};
+
+  \dtitle{Idle cost stays near zero: the pipeline runs only when a new Sentinel-2 image arrives}
+         {Level 01 - AWS deployment, Beta scaffold. Terraform modules mirror report Figures 5.2.1 to 5.2.3. Dashed arrow: evidence written on export.}
+  \dfoot[20cm]{Budget guard (risk R17): run \texttt{terraform plan} and review cost-bearing resources before \texttt{apply}; GPU work is Spot with a timeout. Alpha does not deploy this stack. The security module owns Cognito, KMS keys, Object Lock and CloudTrail (red boxes).
+    The 24 h notice target runs from satellite pass to notification and is a Beta target; the 15 min per-granule budget starts once all inputs are available (NFR1).}
+\end{tikzpicture}
+\end{document}

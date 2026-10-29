@@ -1,0 +1,60 @@
+% Level 01 - Containers (C4 level 2)
+% Question answered: what are the separately deployable parts of MethaneWatch and how do they talk?
+% Facts: report Section 5.1 (Table 5.1.1) and 5.2 (Figures 5.2.1-5.2.3).
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  cont/.style={box,text width=3.7cm,align=left,inner sep=5pt,minimum height=2.2cm,anchor=center}]
+
+  % ---- people ---------------------------------------------------------------
+  \node[actor,text width=2.5cm] (users) at (0,0) {\bfseries Analyst, inspector, regulator, ML engineer};
+
+  % ---- containers ----------------------------------------------------------
+  \node[cont,blue] (web) at (5.2,0) {\nm{Web portal}\\\tech{React, TypeScript, MapLibre}\\[2pt]\footnotesize Map, review queue, detection detail, dossier export, admin.};
+  \node[cont,blue] (api) at (10.6,0) {\nm{API}\\\tech{FastAPI, Pydantic, OpenAPI}\\[2pt]\footnotesize Auth, RBAC, audit, use cases (services). Calls ports only.};
+  \node[cont,red,minimum height=1.6cm] (auth) at (10.6,3.5) {\nm{Auth provider}\\\tech{JWT locally, Cognito in Beta}\\\footnotesize Users and roles.};
+  \node[cont,purple] (inf) at (10.6,-3.8) {\nm{Inference worker}\\\tech{Python container, PyTorch}\\[2pt]\footnotesize Predict mask, verify, quantify (IME), attribute. One run per scene.};
+  \node[cont,teal,dashed] (pipe) at (10.6,-7.6) {\nm{Ingestion workflow (Beta)}\\\tech{SQS, Lambda, Step Functions}\\[2pt]\footnotesize New-scene event to stored scene and triggered run.};
+  \node[cont,orange] (ml) at (5.2,-3.8) {\nm{Training and MLOps}\\\tech{PyTorch, DVC, MLflow}\\[2pt]\footnotesize Pretrain, fine-tune, benchmark, register an approved model.};
+
+  % ---- data stores ----------------------------------------------------------
+  \node[store,minimum width=3.6cm] (db) at (16.2,2.3) {\textbf{Detections store}\\\tiny DynamoDB: detections, reviews, audit};
+  \node[store,minimum width=3.6cm] (lake) at (16.2,0) {\textbf{Data lake}\\\tiny S3: scenes, masks, rasters};
+  \node[store,minimum width=3.6cm,draw=mwred,fill=mwredL] (vault) at (16.2,-2.3) {\textbf{Evidence vault}\\\tiny S3, Object Lock in Beta};
+
+  % ---- external systems (outside the boundary) ---------------------------------
+  \node[ext,text width=3.5cm] (s2) at (22.2,-6.6) {\bfseries Sentinel-2 on AWS Open Data\\[-1pt]\scriptsize L1C scenes, new-scene events};
+  \node[ext,text width=3.5cm] (era) at (22.2,-8.6) {\bfseries ERA5 weather\\[-1pt]\scriptsize hourly wind};
+  \node[ext,text width=3.5cm] (fac) at (22.2,-4.4) {\bfseries Public facility data\\[-1pt]\scriptsize for source attribution};
+
+  % ---- relations ------------------------------------------------------------
+  \draw[flow] (users) -- node[lab,above] {HTTPS} (web);
+  \draw[flow] (web) -- node[lab,above] {REST + JSON} (api);
+  \draw[flow] (api) -- node[lab,right] {verify token, role} (auth);
+  % shared-store bus: API and inference worker both read and write the three stores
+  \draw[line width=0.8pt,draw=mwline] (api.east) -- (13.4,0);
+  \draw[line width=0.8pt,draw=mwline] (13.4,2.3) -- (13.4,-3.2);
+  \draw[line width=0.8pt,draw=mwline] ([yshift=6mm]inf.east) -- (13.4,-3.2);
+  \draw[bflow] (13.4,2.3) -- (db.west);
+  \draw[bflow] (13.4,0) -- (lake.west);
+  \draw[bflow] (13.4,-2.3) -- (vault.west);
+  \node[lab,anchor=west] at (13.5,-3.55) {both read and write the stores through ports};
+  \draw[flow] (pipe) -- node[lab,right] {trigger run} (inf);
+  \draw[flow] (ml) -- node[lab,above] {model} (inf);
+  \draw[dflow] (s2.west) -- ++(-1.2,0) |- node[lab,pos=0.25,left] {scenes} (pipe.east);
+  \draw[dflow] (era.west) -- ++(-0.7,0) |- ([yshift=-4mm]pipe.east);
+  \draw[dflow] (fac.west) -- node[lab,above] {facilities} ([yshift=-6mm]inf.east);
+
+  % ---- boundary -------------------------------------------------------------
+  \begin{scope}[on background layer]
+    \node[group,fit=(web)(api)(auth)(inf)(pipe)(ml)(db)(lake)(vault),draw=mwblue,fill=mwblueL!25,inner sep=14pt] (b) {};
+  \end{scope}
+  \node[glabel,text=mwblue] at (b.north west) {MethaneWatch (Docker Compose locally; AWS in Beta)};
+
+  \dtitle{Seven containers share three stores behind one API}
+         {Level 01 - containers. Blue MethaneWatch parts, red security and evidence, grey people and outside systems (dashed = Beta scaffold).}
+  \dfoot[19cm]{Alpha runs everything except the ingestion workflow on a laptop: the stores are LocalStack S3 and DynamoDB. The components of each container are in 02-components/.
+    Analyst decisions flow back to the Training and MLOps container through the stores (see 06-mlops/lifecycle).}
+\end{tikzpicture}
+\end{document}

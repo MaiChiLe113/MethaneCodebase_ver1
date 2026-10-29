@@ -1,0 +1,34 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.import_linter_cache/
+.ruff_cache/
+*.egg-info/
+# node
+web/node_modules/
+web/dist/
+# data and experiments (tracked by DVC or MLflow, never by git)
+data/
+mlruns/
+*.ckpt
+*.pt
+.dvc/cache
+.dvc/tmp
+# secrets and keys
+.env
+*.pem
+*.key
+signing-key*
+# terraform
+.terraform/
+*.tfstate*
+# diagrams: output/ (rendered PDF and SVG) is committed; build/ is byproducts
+diagrams/build/
+
+# os and editors
+.DS_Store
+.idea/
+.vscode/

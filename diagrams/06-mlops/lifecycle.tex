@@ -1,0 +1,49 @@
+% Level 06 - Model lifecycle
+% Question answered: how does a model get trained, judged, promoted and watched, and how does the system learn from analysts?
+% Facts: report MLOps scope (DVC + MLflow), Beta promotion gate (F1 >= 0.80, FPR < 0.03 percent), review records as feedback, synthetic pretraining then real fine-tuning.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  c/.style={box,text width=3.0cm,align=left,inner sep=4pt,minimum height=1.9cm,font=\sffamily\footnotesize}]
+
+  % layer bands
+  \node[note,anchor=east,text width=2.2cm,align=right] at (-0.9,3.2) {\bfseries Data layer};
+  \node[note,anchor=east,text width=2.2cm,align=right] at (-0.9,0.0) {\bfseries Model layer};
+  \node[note,anchor=east,text width=2.2cm,align=right] at (-0.9,-3.2) {\bfseries Serving layer};
+  \draw[draw=mwline!40] (-3.2,4.5) -- (21.5,4.5) (-3.2,1.6) -- (21.5,1.6) (-3.2,-1.6) -- (21.5,-1.6) (-3.2,-4.8) -- (21.5,-4.8);
+
+  % data layer
+  \node[c,green] (dv) at (1.8,3.2) {\nm{Versioned data}\\ DVC: recipes, stacks, manifests with hashes};
+  \node[c,green] (sp) at (6.0,3.2) {\nm{Fixed splits}\\ Grouped by event, site, date; real test sealed};
+  \node[c,green,dashed] (hn) at (14.4,3.2) {\nm{Reviewed cases}\\ Rejected and Uncertain candidates become hard negatives};
+
+  % model layer
+  \node[c,orange] (tr) at (1.8,0) {\nm{Train}\\ Synthetic pretrain, then real fine-tune; config and seed logged};
+  \node[c,orange] (ev) at (6.0,0) {\nm{Evaluate}\\ IoU, F1, false-positive rate, per-site, on real test};
+  \node[c,orange] (rg) at (10.2,0) {\nm{Register}\\ MLflow run, data version, metrics, model card};
+  \node[c,red,strong] (gt) at (14.4,0) {\nm{Release gate}\\ Beta: F1 $\ge$ 0.80 and FPR $<$ 0.03\%; else hold};
+
+  % serving layer
+  \node[c,blue] (dp) at (14.4,-3.2) {\nm{Promote}\\ Approved flag set; API loads that version};
+  \node[c,blue] (sv) at (10.2,-3.2) {\nm{Serve}\\ Inference worker on the approved model};
+  \node[c,purple] (mo) at (6.0,-3.2) {\nm{Monitor}\\ Candidate rate, review outcomes, drift per region};
+  \node[c,teal,dashed] (rb) at (18.6,-3.2) {\nm{Roll back}\\ Previous approved version in 60 s};
+
+  \draw[flow] (dv) -- (sp); \draw[flow] (dv.south) -- (tr.north); \draw[flow] (sp.south) -- (ev.north);
+  \draw[flow] (tr) -- (ev); \draw[flow] (ev) -- (rg); \draw[flow] (rg) -- (gt);
+  \draw[flow] (gt) -- node[lab,right] {pass} (dp);
+  \draw[flow] (dp) -- (sv); \draw[flow] (sv) -- (mo);
+  \draw[dflow] (dp) -- (rb); \draw[dflow] (rb.north) |- node[lab,pos=0.25,right] {failure or regression} (gt.east);
+
+  % feedback loops
+  \draw[flow,mwred,line width=1.1pt] (mo.west) -| (tr.south);
+  \node[lab,rotate=90,text=mwred] at (1.5,-2.35) {loop 2};
+  \draw[flow,mwpurple,line width=1.1pt] (mo.north) -- ++(0,0.8) -| node[lab,pos=0.25,above,text=mwpurple] {loop 1: analyst review} (hn.south west);
+  \draw[flow,mwpurple,line width=1.1pt] (hn.west) -- (sp.east);
+
+  \dtitle{Two loops keep the model honest: analysts feed it, monitoring triggers it}
+         {Level 06 - lifecycle. Three layers, one gate. Loop 1 turns reviews into training cases; loop 2 retrains when monitoring shows drift or false alarms.}
+  \dfoot[22cm]{Alpha targets (IoU 0.70, F1 0.75) are research results to measure and report; the Beta gate decides promotion. The two are different and never interchangeable. Rollback in 60 s is a Beta target.}
+\end{tikzpicture}
+\end{document}

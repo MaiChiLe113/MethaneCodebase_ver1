@@ -1,0 +1,47 @@
+% Level 04 - Sequence: export and verify an evidence dossier
+% Question answered: how does a reviewed detection become a signed, tamper-evident dossier, and how is it checked later?
+% Facts: report D8 (hashes + lineage + signed PDF), NFR2 (SHA-256, write-once vault), NFR3 (audit), evidence integrity test.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\input{../_common/mwseq.tex}
+\begin{document}
+\begin{tikzpicture}
+  \lifehead{an}{0}{gold}{Analyst or inspector}
+  \lifehead{ap}{3.4}{blue}{API\\rbac, audit}
+  \lifehead{ex}{6.8}{blue}{services\\ExportDossier}
+  \lifehead{ev}{10.2}{red}{evidence/}
+  \lifehead{sg}{13.6}{red}{Signer}
+  \lifehead{es}{17.0}{teal}{EvidenceStore\\(write once)}
+  \foreach \x in {0,3.4,6.8,10.2,13.6,17.0} {\life{\x}{-0.6}{-15.4}}
+
+  \msg{0}{3.4}{-1.2}{POST .../dossier}
+  \act{3.4}{-1.0}{-14.4}
+  \msg{3.4}{6.8}{-2.0}{export(detection\_id) after rbac}
+  \act{6.8}{-1.8}{-14.0}
+  \selfmsg{6.8}{-2.4}{load detection, latest Review}
+  \selfmsg{6.8}{-3.3}{status Supported and evidence complete?}
+  \snote{7.6}{-4.2}{4.0cm}{If not: refuse with the missing item named. Nothing is written.}
+  \msg{6.8}{10.2}{-5.4}{seal(artefacts, provenance)}
+  \act{10.2}{-5.2}{-9.0}
+  \selfmsg{10.2}{-5.7}{SHA-256 of each artefact}
+  \selfmsg{10.2}{-6.6}{PROV-style lineage}
+  \selfmsg{10.2}{-7.5}{render PDF + manifest.json}
+  \msg{10.2}{13.6}{-8.8}{sign(manifest)}
+  \ret{13.6}{10.2}{-9.4}{detached signature}
+  \msg{10.2}{17.0}{-10.2}{put(dossier, manifest, signature)}
+  \ret{17.0}{10.2}{-10.8}{stored; overwrite refused}
+  \ret{10.2}{6.8}{-11.5}{dossier\_id, manifest\_sha256}
+  \msg{6.8}{3.4}{-12.3}{audit: export by user}
+  \ret{3.4}{0}{-13.5}{download link}
+
+  \frag{-0.8}{18.4}{-14.8}{-18.4}{later: verify}
+  \msg{0}{3.4}{-15.8}{GET .../verify}
+  \msg{3.4}{10.2}{-16.6}{verify(dossier\_id)}
+  \selfmsg{10.2}{-16.9}{recompute digests, check signature}
+  \ret{10.2}{0}{-18.0}{Intact, or Tampered + which artefact}
+
+  \dtitle{Nothing is exported unless it is reviewed, and nothing exported can change silently}
+         {Level 04 - sequence: export and verify. The test required by the report modifies a protected artefact in a test copy and expects Tampered.}
+  \dfoot[19cm]{Integrity proves a record is unchanged; it does not prove the science is right. The signature protects the manifest; the private key is never committed.}
+\end{tikzpicture}
+\end{document}

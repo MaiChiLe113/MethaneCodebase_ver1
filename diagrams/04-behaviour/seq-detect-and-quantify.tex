@@ -1,0 +1,51 @@
+% Level 04 - Sequence: detect and quantify one scene
+% Question answered: in what order do the packages run when a new Sentinel-2 pass is processed?
+% Facts: report FR1-FR3, FR7; NFR1 (one granule in 15 minutes); candidate then verification then estimate then attribution, saved with evidence references.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\input{../_common/mwseq.tex}
+\begin{document}
+\begin{tikzpicture}
+  \lifehead{wk}{0}{blue}{workers}
+  \lifehead{sv}{3.2}{blue}{services\\RunDetection}
+  \lifehead{ss}{6.4}{teal}{SceneSource}
+  \lifehead{inf}{9.6}{orange}{inference}
+  \lifehead{ver}{12.8}{purple}{verification}
+  \lifehead{qu}{16.0}{purple}{quantification}
+  \lifehead{at}{19.2}{purple}{attribution}
+  \lifehead{rp}{22.4}{teal}{Detection\\Repository}
+  \foreach \x in {0,3.2,6.4,9.6,12.8,16.0,19.2,22.4} {\life{\x}{-0.5}{-15.6}}
+
+  \msg{0}{3.2}{-1.2}{run(region, date)}
+  \act{3.2}{-1.0}{-15.0}
+  \msg{3.2}{6.4}{-2.1}{find\_scenes(region, date)}
+  \ret{6.4}{3.2}{-2.7}{target scene + up to 6 reference scenes}
+  \msg{3.2}{9.6}{-3.6}{predict(stack)}
+  \act{9.6}{-3.4}{-5.8}
+  \selfmsg{9.6}{-4.0}{tile 100x100, preprocess, model, polygonise}
+  \ret{9.6}{3.2}{-5.6}{candidate objects (mask, confidence)}
+
+  \frag{2.4}{23.6}{-6.4}{-14.4}{loop: each candidate}
+  \msg{3.2}{12.8}{-7.4}{verify(candidate, history)}
+  \act{12.8}{-7.2}{-8.8}
+  \selfmsg{12.8}{-7.7}{stages 1, 2, 3}
+  \ret{12.8}{3.2}{-8.7}{status proposal + evidence refs}
+  \msg{3.2}{16.0}{-9.7}{estimate(candidate, wind)}
+  \act{16.0}{-9.5}{-11.0}
+  \selfmsg{16.0}{-9.9}{WindProvider.wind\_at; IME; range}
+  \ret{16.0}{3.2}{-10.9}{Estimate or Unavailable (never a bare number)}
+  \msg{3.2}{19.2}{-11.9}{match(candidate, wind)}
+  \ret{19.2}{3.2}{-12.5}{Match or Unresolved}
+  \msg{3.2}{22.4}{-13.4}{save(detection + proposal + estimate + match)}
+  \ret{22.4}{3.2}{-14.0}{detection\_id}
+
+  \ret{3.2}{0}{-15.0}{summary: counts per status}
+
+  \snote{14.0}{-0.45}{4.6cm}{NFR1: the whole loop for one granule (25 chips) must finish within 15 minutes.}
+  \snote{14.0}{-3.3}{4.6cm}{No candidate is deleted; poor observations return Unreviewable.}
+
+  \dtitle{One pass in, a ranked list of defensible candidates out}
+         {Level 04 - sequence: detect and quantify. Services orchestrate; every capability is called through a Protocol and knows nothing about the others.}
+  \dfoot[22cm]{The proposal is not a decision: the analyst sets the final status in the review sequence. Estimates carry the wind source and version, so a preliminary ERA5T rate can be replaced once the final product exists.}
+\end{tikzpicture}
+\end{document}

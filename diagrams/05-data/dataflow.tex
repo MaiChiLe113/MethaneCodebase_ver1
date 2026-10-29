@@ -1,0 +1,57 @@
+% Level 05 - Data flow
+% Question answered: which data exists in which zone, who produces it, and what is versioned?
+% Facts: report data sources (Sentinel-2 L1C via STAC, ERA5, public facility data, MethaneSET), D8/NFR2 evidence, DVC + MLflow decision.
+\documentclass[tikz,border=10pt]{standalone}
+\input{../_common/mwstyle.tex}
+\begin{document}
+\begin{tikzpicture}[
+  src/.style={box,ext,text width=3.0cm,align=left,inner sep=4pt,minimum height=1.2cm,font=\sffamily\footnotesize},
+  pr/.style={box,blue,text width=3.0cm,align=left,inner sep=4pt,minimum height=1.5cm,font=\sffamily\footnotesize},
+  zn/.style={box,green,text width=3.2cm,align=left,inner sep=4pt,minimum height=1.5cm,font=\sffamily\footnotesize}]
+
+  % sources
+  \node[src] (s2) at (0,3.6) {\nm{Sentinel-2 L1C}\\ STAC catalogue};
+  \node[src] (era) at (0,1.8) {\nm{ERA5 and ERA5T}\\ CDS API};
+  \node[src] (fac) at (0,0.0) {\nm{Facility data}\\ public infrastructure};
+  \node[src] (ms) at (0,-1.8) {\nm{MethaneSET}\\ pretraining, plume bank, fine-tune};
+
+  % monitoring path
+  \node[pr] (ing) at (4.6,3.6) {\nm{data/ingest}\\ Find passes, download, record checksums};
+  \node[zn] (raw) at (8.8,3.6) {\nm{raw/}\\ L1C scenes and wind files, never edited};
+  \node[pr] (tile) at (13.0,3.6) {\nm{data/tiling, preprocess}\\ B11 and B12 to 20 m, 100 x 100 chips, one target plus references};
+  \node[zn,strong] (stk) at (17.2,3.6) {\nm{curated/stacks}\\ Tensors ready for a model, with a manifest and hash};
+
+  \node[pr] (inf) at (17.2,1.0) {\nm{inference}\\ Predict, polygonise, candidates};
+  \node[zn] (prd) at (13.0,1.0) {\nm{predictions/}\\ Masks and enhancement maps, by model version};
+  \node[pr] (sci) at (8.8,1.0) {\nm{services, science}\\ Verify, quantify, attribute, save};
+  \node[zn] (ddb) at (4.6,1.0) {\nm{detections table}\\ Detections, reviews, estimates};
+
+  \node[pr,red] (evd) at (8.8,-1.6) {\nm{evidence/}\\ Hash, provenance, sign};
+  \node[zn,red,strong] (vlt) at (13.0,-1.6) {\nm{evidence vault}\\ Dossiers, write once};
+
+  % training path
+  \node[pr,orange] (rec) at (4.6,-4.2) {\nm{data/synthetic}\\ Build recipes from backgrounds and plumes};
+  \node[zn,orange] (rcz) at (8.8,-4.2) {\nm{curated/recipes}\\ Parquet, deterministic, versioned with DVC};
+  \node[pr,orange] (trn) at (13.0,-4.2) {\nm{training, evaluation}\\ Reads stacks and recipes; pretrain, fine-tune, score on real test};
+  \node[zn,orange] (mdl) at (17.2,-4.2) {\nm{models/}\\ MLflow runs and the approved version};
+
+  % arrows monitoring
+  \draw[flow] (s2) -- (ing.west);
+  \draw[flow] (ing) -- (raw); \draw[flow] (raw) -- (tile); \draw[flow] (tile) -- (stk);
+  \draw[flow] (stk) -- (inf); \draw[flow] (inf) -- (prd); \draw[flow] (prd) -- (sci); \draw[flow] (sci) -- (ddb);
+  \draw[flow] (fac.east) -- (7.9,0.0) -- ([xshift=-0.9cm]sci.south);
+  \draw[flow] (era.east) -- (1.9,1.8) -- (1.9,2.25) -- (7.9,2.25) -- ([xshift=-0.9cm]sci.north);
+  \draw[flow] (sci) -- (evd); \draw[flow] (evd) -- (vlt);
+  % arrows training
+  \draw[flow] (ms.east) -| (rec.north);
+  \draw[flow] (rec) -- (rcz); \draw[flow] (rcz) -- (trn); \draw[flow] (trn) -- (mdl);
+  \draw[dflow] (mdl.east) -- (19.5,-4.2) -- (19.5,1.0) -- (inf.east);
+  \node[lab,rotate=90] at (19.5,-1.6) {approved model};
+
+  \node[box,gold,text width=5.0cm,align=left,inner sep=5pt,font=\sffamily\footnotesize,anchor=north west] at (0.0,-6.2) {\nm{What is versioned}\\ DVC: curated data, recipes and manifests (hash).\\ Git: code, configs, release gates.\\ MLflow: runs, metrics, model versions.};
+
+  \dtitle{Raw is never edited; everything downstream carries a hash}
+         {Level 05 - data flow. Top: the monitoring path. Bottom: the training path. Dashed: the approved model goes to inference.}
+  \dfoot[20cm]{The same preprocessing code builds the stacks for training and for monitoring, so what the model sees in production is what it was evaluated on.}
+\end{tikzpicture}
+\end{document}
